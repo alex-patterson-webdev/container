@@ -1,0 +1,43 @@
+{
+  "name" : "alex-patterson-webdev/container-array",
+  "description": "Array based PSR container implementation",
+  "version": "1.0.0",
+  "minimum-stability": "stable",
+  "prefer-stable": true,
+  "authors": [
+    {
+      "name": "Alex Patterson",
+      "email": "alex.patterson.webdev@gmail.com"
+    }
+  ],
+  "provide" : {
+    "psr/container-implementation" : "1.0.0"
+  },
+  "require": {
+    "php" : ">=7.2",
+    "alex-patterson-webdev/container" : "dev-feature/3.0.0",
+    "alex-patterson-webdev/factory": "^1"
+  },
+  "require-dev": {
+    "squizlabs/php_codesniffer": "^3.5",
+    "phpunit/phpunit" : "^8"
+  },
+  "autoload": {
+    "psr-4": {
+      "Arp\\ContainerArray\\" : "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "ArpTest\\ContainerArray\\" : "test/phpunit"
+    }
+  },
+  "scripts": {
+    "test": "phpunit --coverage-clover=coverage.xml"
+  },
+  "config": {
+    "preferred-install": "dist",
+    "optimize-autoloader": true,
+    "sort-packages": true
+  }
+}
