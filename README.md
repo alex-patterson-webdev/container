@@ -1,23 +1,15 @@
+[![Build Status](https://travis-ci.com/alex-patterson-webdev/container-array.svg?branch=master)](https://travis-ci.com/alex-patterson-webdev/container-array)
+[![codecov](https://codecov.io/gh/alex-patterson-webdev/container-array/branch/master/graph/badge.svg)](https://codecov.io/gh/alex-patterson-webdev/container-array)
+
 # Arp\ContainerArray
 
 ## About
 
-An array based Implementation of the PSR-11 dependency Injection container.
+An array based implementation of the PSR-11 container.
 
 ## Installation
 
 Installation via [Composer](https://getcomposer.org).
 
     require alex-patterson-webdev/container-array ^1
-    
-## Usage
-
-The `ArrayAdapter` class joins the `Arp\Container\Container` together
-
-    use Arp\ContainerArray\Factory\Adapter\ArrayAdapterFactory;
-    use Arp\Container\Container;
-
-    $adapter = (new ArrayAdapterFactory())->create();
-    $container = new Container($adapter);
-    
-    $foo = $container->get('foo');
+ 
