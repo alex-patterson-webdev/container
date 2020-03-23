@@ -14,7 +14,7 @@ use Psr\Container\NotFoundExceptionInterface;
  * @author  Alex Patterson <alex.patterson.webdev@gmail.com>
  * @package Arp\Container
  */
-final class ArrayContainer implements ContainerInterface
+class ArrayContainer implements ContainerInterface
 {
     /**
      * An array of services that have been added or created

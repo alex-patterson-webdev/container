@@ -1,6 +1,6 @@
 {
   "name" : "alex-patterson-webdev/container-array",
-  "description": "Array based PSR container implementation",
+  "description": "Array based Implementation of the PSR-11 dependency Injection container",
   "version": "1.0.0",
   "minimum-stability": "stable",
   "prefer-stable": true,
