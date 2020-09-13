@@ -16,8 +16,6 @@ use Arp\Factory\FactoryInterface;
 class ArrayAdapterFactory implements FactoryInterface
 {
     /**
-     * Create a new ArrayAdapter
-     *
      * @param array $config The optional factory configuration options.
      *
      * @return ArrayAdapter

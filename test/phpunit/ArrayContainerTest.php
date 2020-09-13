@@ -8,9 +8,13 @@ use Arp\Container\Exception\ContainerException;
 use Arp\Container\Exception\NotFoundException;
 use Arp\ContainerArray\ArrayContainer;
 use PHPUnit\Framework\TestCase;
+use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
+use Psr\Container\NotFoundExceptionInterface;
 
 /**
+ * @covers \Arp\ContainerArray\ArrayContainer
+ *
  * @author  Alex Patterson <alex.patterson.webdev@gmail.com>
  * @package ArpTest\ContainerArray
  */
@@ -18,8 +22,6 @@ final class ArrayContainerTest extends TestCase
 {
     /**
      * Assert that the ArrayContainer implements ContainerInterface.
-     *
-     * @covers \Arp\ContainerArray\ArrayContainer
      */
     public function testImplementsContainerInterface(): void
     {
@@ -29,39 +31,80 @@ final class ArrayContainerTest extends TestCase
     }
 
     /**
-     * Assert that a value can be set and returned from the container.
+     * Assert that a non string value, $name, will raise a ContainerException when passed to get.
      *
-     * @covers \Arp\ContainerArray\ArrayContainer::set
-     * @covers \Arp\ContainerArray\ArrayContainer::get
+     * @param mixed $name
+     *
+     * @dataProvider getGetWithNonStringWillThrowInvalidArgumentExceptionData
+     *
+     * @throws ContainerExceptionInterface
      */
-    public function testSetAndGet(): void
+    public function testGetWithNonStringWillThrowInvalidArgumentException($name): void
     {
         $container = new ArrayContainer();
 
-        $this->assertSame($container, $container->set('Foo', 'Test'));
-        $this->assertSame('Test', $container->get('Foo'));
+        $this->expectException(ContainerExceptionInterface::class);
+        $this->expectExceptionMessage(
+            sprintf(
+                'The \'name\' argument must be of type \'string\'; \'%s\' provided in \'%s\'',
+                gettype($name),
+                'get'
+            )
+        );
+
+        $container->get($name);
     }
 
     /**
-     * Assert that has() will return a boolean value for the requested service.
-     *
-     * @covers \Arp\ContainerArray\ArrayContainer::has
+     * @return array
      */
-    public function testHas(): void
+    public function getGetWithNonStringWillThrowInvalidArgumentExceptionData(): array
+    {
+        return [
+            [true],
+            [123],
+            [new \stdClass()]
+        ];
+    }
+
+    /**
+     * Assert that has() will return true for a service that has been set on the container
+     *
+     * @throws ContainerExceptionInterface
+     */
+    public function testHasWillAssertBooleanForMatchingService(): void
     {
         $container = new ArrayContainer();
 
-        $this->assertFalse($container->has('Foo'));
+        $name = \stdClass::class;
+        $service = new \stdClass();
 
-        $container->set('Foo', 'FooService');
+        $this->assertFalse($container->has($name));
 
-        $this->assertTrue($container->has('Foo'));
+        $container->set($name, $service);
+
+        $this->assertTrue($container->has($name));
+    }
+
+    /**
+     * Assert that a value can be set and returned from the container.
+     */
+    public function testAServiceThatIsSetWillBeReturnedByGet(): void
+    {
+        $container = new ArrayContainer();
+
+        $name = \stdClass::class;
+        $service = new \stdClass();
+
+        $container->set($name, $service);
+
+        $this->assertSame($service, $container->get($name));
     }
 
     /**
      * Assert that the container will throw a NotFoundException if the requested service cannot be found.
      *
-     * @covers \Arp\ContainerArray\ArrayContainer::get
+     * @throws NotFoundExceptionInterface
      */
     public function testGetWillThrowNotFoundExceptionIfRequestedServiceIsNotRegistered(): void
     {
@@ -70,16 +113,15 @@ final class ArrayContainerTest extends TestCase
         $name = 'FooService';
 
         $this->expectException(NotFoundException::class);
-        $this->expectExceptionMessage(sprintf('Service \'%s\' could not be found', $name));
+        $this->expectExceptionMessage(
+            sprintf('Service \'%s\' could not be found registered with the container', $name)
+        );
 
         $container->get($name);
     }
 
     /**
      * Assert that a invalid/non-callable factory class will throw a ContainerException.
-     *
-     * @covers \Arp\ContainerArray\ArrayContainer::get
-     * @covers \Arp\ContainerArray\ArrayContainer::setFactoryClass
      */
     public function testGetWillThrowContainerExceptionIfTheRegisteredFactoryIsNotCallable(): void
     {
@@ -91,35 +133,33 @@ final class ArrayContainerTest extends TestCase
         $container->setFactoryClass($name, $factory);
 
         $this->expectException(ContainerException::class);
-        $this->expectExceptionMessage(sprintf('The factory for service \'%s\' is not callable', $name));
+        $this->expectExceptionMessage(
+            sprintf('Unable to create service \'%s\': The registered factory is not callable', $name)
+        );
 
         $container->get($name);
     }
 
     /**
      * Assert that the container will throw a ContainerException is the registered factory throws an exception.
-     *
-     * @covers \Arp\ContainerArray\ArrayContainer::get
      */
     public function testFactoryCreationErrorWillBeCaughtAndRethrownAsContainerException(): void
     {
         $container = new ArrayContainer();
 
         $name = 'FooService';
-        $exceptionMessage = 'This is a test exception message';
+        $exceptionMessage = 'This is another test exception message';
 
-        $factory = static function () use ($exceptionMessage) : void {
+        $factory = static function () use ($exceptionMessage): void {
             throw new \RuntimeException($exceptionMessage);
         };
 
         $container->setFactory($name, $factory);
 
         $this->expectException(ContainerException::class);
-        $this->expectExceptionMessage(sprintf(
-            'An error occurred while creating service \'%s\' : %s',
-            $name,
-            $exceptionMessage
-        ));
+        $this->expectExceptionMessage(
+            sprintf('The service \'%s\' could not be created: %s', $name, $exceptionMessage)
+        );
 
         $container->get($name);
     }

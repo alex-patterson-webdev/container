@@ -17,18 +17,34 @@ use Psr\Container\NotFoundExceptionInterface;
 class ArrayContainer implements ContainerInterface
 {
     /**
-     * An array of services that have been added or created
-     *
-     * @var mixed[]
+     * @var string[]
      */
-    private $services = [];
+    private array $aliases = [];
 
     /**
-     * An array of service names to factory classes
-     *
+     * @var mixed[]
+     */
+    private array $services = [];
+
+    /**
      * @var callable[]
      */
-    private $factories = [];
+    private array $factories = [];
+
+    /**
+     * @var string[]
+     */
+    private array $factoryClasses = [];
+
+    /**
+     * @param array $config
+     *
+     * @throws ContainerException
+     */
+    public function __construct(array $config = [])
+    {
+        $this->configure($config);
+    }
 
     /**
      * @param string $name Identifier of the entry to look for
@@ -37,48 +53,80 @@ class ArrayContainer implements ContainerInterface
      *
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
+     *
+     * @noinspection PhpMissingParamTypeInspection
      */
     public function get($name)
     {
-        if (array_key_exists($name, $this->services)) {
-            return $this->services[$name];
-        }
-
-        if (! array_key_exists($name, $this->factories)) {
-            throw new NotFoundException(sprintf('Service \'%s\' could not be found', $name));
-        }
-
-        $factory = $this->factories[$name];
-
-        if (is_string($factory)) {
-            $factory = new $factory();
-        }
-
-        if (! is_callable($factory)) {
-            throw new ContainerException(sprintf('The factory for service \'%s\' is not callable', $name));
-        }
-
-        try {
-            $this->services[$name] = $factory($this);
-        } catch (\Throwable $e) {
+        if (!is_string($name)) {
             throw new ContainerException(
-                sprintf('An error occurred while creating service \'%s\' : %s', $name, $e->getMessage()),
-                $e->getCode(),
-                $e
+                sprintf(
+                    'The \'name\' argument must be of type \'string\'; \'%s\' provided in \'%s\'',
+                    gettype($name),
+                    __FUNCTION__
+                )
             );
         }
 
-        return $this->services[$name];
+        return $this->doGet($name);
+    }
+
+    /**
+     * @param string     $name
+     * @param array|null $arguments
+     *
+     * @return mixed
+     *
+     * @throws ContainerException
+     * @throws NotFoundException
+     */
+    private function doGet(string $name, array $arguments = null)
+    {
+        if (isset($this->services[$name])) {
+            return $this->services[$name];
+        }
+
+        if (isset($this->aliases[$name])) {
+            return $this->get($this->aliases[$name]);
+        }
+
+        $factory = $this->resolveFactory($name);
+        if (null !== $factory) {
+            $service = $this->invokeFactory($factory, $name, $arguments);
+            $this->set($name, $service);
+            return $service;
+        }
+
+        throw new NotFoundException(
+            sprintf('Service \'%s\' could not be found registered with the container', $name)
+        );
     }
 
     /**
      * @param string $name
      *
      * @return bool
+     *
+     * @throws ContainerException
+     *
+     * @noinspection PhpMissingParamTypeInspection
      */
     public function has($name): bool
     {
-        return array_key_exists($name, $this->services) || array_key_exists($name, $this->factories);
+        if (!is_string($name)) {
+            throw new ContainerException(
+                sprintf(
+                    'The \'name\' argument must be of type \'string\'; \'%s\' provided in \'%s\'',
+                    gettype($name),
+                    __FUNCTION__
+                )
+            );
+        }
+
+        return isset($this->services[$name])
+            || isset($this->factories[$name])
+            || isset($this->aliases[$name])
+            || isset($this->factoryClasses[$name]);
     }
 
     /**
@@ -97,67 +145,211 @@ class ArrayContainer implements ContainerInterface
     }
 
     /**
-     * Set a callable factory for service with $name.
+     * Register a callable factory for the container.
      *
-     * @param string   $name
-     * @param callable $service
+     * @param string   $name    The name of the service to register.
+     * @param callable $factory The factory callable responsible for creating the service.
      *
      * @return $this
      */
-    public function setFactory($name, callable $service): self
+    public function setFactory(string $name, callable $factory): self
     {
-        $this->factories[$name] = $service;
+        $this->factories[$name] = $factory;
 
         return $this;
     }
 
     /**
-     * Set a factory class name
+     * Set the class name of a factory that will create service $name.
+     *
+     * @param string      $name         The name of the service to set the factory for.
+     * @param string      $factoryClass The fully qualified class name of the factory.
+     * @param string|null $method       The name of the factory method to call.
+     *
+     * @return $this
+     */
+    public function setFactoryClass(string $name, string $factoryClass, string $method = null): self
+    {
+        $this->factoryClasses[$name] = [$factoryClass, $method];
+
+        return $this;
+    }
+
+    /**
+     * Set an alias for a given service
+     *
+     * @param string $alias The name of the alias to set
+     * @param string $name  The name of the service that
+     *
+     * @return $this
+     *
+     * @throws ContainerException
+     */
+    public function setAlias(string $alias, string $name): self
+    {
+        if (!isset($this->services[$name])) {
+            throw new ContainerException(
+                sprintf('Unable to configure alias \'%s\' for unknown service \'%s\'', $alias, $name)
+            );
+        }
+
+        $this->aliases[$alias] = $name;
+
+        return $this;
+    }
+
+    /**
+     * Create a new service with the provided options
      *
      * @param string $name
-     * @param string $factoryClass
-     *
-     * @return $this
-     */
-    public function setFactoryClass(string $name, string $factoryClass): self
-    {
-        $this->factories[$name] = $factoryClass;
-
-        return $this;
-    }
-
-    /**
-     * Create a new instance of the requested service
-     *
-     * @param string $name    The name of the service to create
-     * @param array  $options The optional creation options
+     * @param array  $arguments
      *
      * @return mixed
      *
-     * @throws ContainerException If the creation of the requested service fails
-     * @throws NotFoundException If the service cannot by found
+     * @throws ContainerException
      */
-    public function create(string $name, array $options = [])
+    public function build(string $name, array $arguments = [])
     {
-        $factory = null;
+        if (isset($this->aliases[$name])) {
+            return $this->build($this->aliases[$name]);
+        }
 
-        if (array_key_exists($name, $this->factories)) {
-            $factory = $this->factories[$name];
+        $factory = $this->resolveFactory($name);
 
-            if (is_string($factory)) {
-                $factory = new $factory();
+        if (null === $factory) {
+            throw new ContainerException(
+                sprintf('Unable to build service \'%s\': No valid factory could be found', $name)
+            );
+        }
+
+        return $this->invokeFactory($factory, $name, $arguments);
+    }
+
+    /**
+     * @param array $config
+     *
+     * @return $this
+     *
+     * @throws ContainerException
+     */
+    public function configure(array $config): self
+    {
+        if (isset($config['services']) && is_array($config['services'])) {
+            foreach ($config['services'] as $name => $service) {
+                $this->set($name, $service);
             }
         }
 
-        if (null === $factory || ! is_callable($factory)) {
-            throw new NotFoundException(
+        if (isset($config['factories']) && is_array($config['factories'])) {
+            foreach ($config['factories'] as $name => $factory) {
+                $this->setFactory($name, $factory);
+            }
+        }
+
+        if (isset($config['factories_classes']) && is_array($config['factories_classes'])) {
+            foreach ($config['factories_classes'] as $name => $factoryClassName) {
+                $this->setFactoryClass($name, $factoryClassName);
+            }
+        }
+
+        if (isset($config['aliases']) && is_array($config['aliases'])) {
+            foreach ($config['aliases'] as $name => $alias) {
+                $this->setAlias($alias, $name);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @param callable   $factory
+     * @param string     $name
+     * @param array|null $options
+     *
+     * @return mixed
+     *
+     * @throws ContainerExceptionInterface
+     */
+    private function invokeFactory(callable $factory, string $name, array $options = null)
+    {
+        try {
+            return $factory($this, $name, $options);
+        } catch (\Throwable $e) {
+            throw new ContainerException(
+                sprintf('The service \'%s\' could not be created: %s', $name, $e->getMessage()),
+                $e->getCode(),
+                $e
+            );
+        }
+    }
+
+    /**
+     * @param string $name
+     *
+     * @return callable|null
+     *
+     * @throws ContainerException
+     *
+     * @noinspection PhpUnusedParameterInspection
+     */
+    private function resolveFactory(string $name): ?callable
+    {
+        $factory = null;
+        if (isset($this->factories[$name])) {
+            $factory = $this->factories[$name];
+        } elseif (isset($this->factoryClasses[$name][0])) {
+            $factory = $this->resolveFactoryClass($name);
+        } elseif (class_exists($name, true)) {
+            $factory = static function (ContainerInterface $container, string $name, array $arguments = []): object {
+                return new $name(...$arguments);
+            };
+        }
+
+        if (null !== $factory && !is_callable($factory)) {
+            throw new ContainerException(
+                sprintf('Unable to create service \'%s\': The registered factory is not callable', $name)
+            );
+        }
+
+        return $factory;
+    }
+
+    /**
+     * @param string $name
+     *
+     * @return array
+     *
+     * @throws ContainerException
+     */
+    private function resolveFactoryClass(string $name): array
+    {
+        $className = $this->factoryClasses[$name][0] ?? null;
+
+        if (null === $className || !class_exists($className, false)) {
+            throw new ContainerException(
                 sprintf(
-                    'Unable to find an invokable factory for service \'%s\'',
-                    $name
+                    'Unable create service \'%s\': The factory class \'%s\' cannot be found',
+                    $name,
+                    $className ?? ''
                 )
             );
         }
 
-        return $factory($this, $name, $options);
+        try {
+            $factory = new $className();
+        } catch (\Throwable $e) {
+            throw new ContainerException(
+                sprintf(
+                    'Failed to create factory class \'%s\' for service \'%s\': %s',
+                    $className,
+                    $name,
+                    $e->getMessage()
+                ),
+                $e->getCode(),
+                $e
+            );
+        }
+
+        return [$factory, $this->factoryClasses[$name][1] ?? '__invoke'];
     }
 }
