@@ -3,3 +3,5 @@ vendor/
 composer.phar
 .phpunit.result.cache
 coverage.xml
+.php_cs.cache
+clover.xml
