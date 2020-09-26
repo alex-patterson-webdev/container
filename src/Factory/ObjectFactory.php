@@ -29,16 +29,15 @@ final class ObjectFactory implements ServiceFactoryInterface
         if (!class_exists($name, true)) {
             throw new ServiceFactoryException(
                 sprintf(
-                    'Unable to create a new object from using class name \'%s\'; the class cannot be found',
+                    'Unable to create a new object from requested service \'%s\': '
+                    . 'The service  does not resolve to a valid class name',
                     $name
                 )
             );
         }
 
-        if (null === $options) {
-            return new $name();
-        }
-
-        return new $name(...$options);
+        return (null === $options)
+            ? new $name()
+            : new $name(...$options);
     }
 }

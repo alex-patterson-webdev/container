@@ -37,20 +37,28 @@ final class ConfigServiceProvider implements ServiceProviderInterface
      */
     public function registerServices(Container $container): void
     {
-        if (isset($this->config[static::SERVICES]) && is_array($this->config[static::SERVICES])) {
-            foreach ($this->config[static::SERVICES] as $name => $service) {
-                $container->set($name, $service);
+        try {
+            if (isset($this->config[static::SERVICES]) && is_array($this->config[static::SERVICES])) {
+                foreach ($this->config[static::SERVICES] as $name => $service) {
+                    $container->set($name, $service);
+                }
             }
-        }
 
-        if (isset($this->config['factories']) && is_array($this->config['factories'])) {
-            $this->registerFactories($container, $this->config['factories']);
-        }
-
-        if (isset($this->config['aliases']) && is_array($this->config['aliases'])) {
-            foreach ($this->config['aliases'] as $name => $alias) {
-                $container->setAlias($alias, $name);
+            if (isset($this->config[static::FACTORIES]) && is_array($this->config[static::FACTORIES])) {
+                $this->registerFactories($container, $this->config[static::FACTORIES]);
             }
+
+            if (isset($this->config[static::ALIASES]) && is_array($this->config[static::ALIASES])) {
+                foreach ($this->config[static::ALIASES] as $name => $alias) {
+                    $container->setAlias($alias, $name);
+                }
+            }
+        } catch (\Throwable $e) {
+            throw new ServiceProviderException(
+                sprintf('Failed to register services with the container: %s', $e->getMessage()),
+                $e->getCode(),
+                $e
+            );
         }
     }
 
