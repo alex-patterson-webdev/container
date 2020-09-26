@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Arp\ContainerArray;
+namespace Arp\Container;
 
 use Arp\Container\Exception\ContainerException;
 use Arp\Container\Exception\NotFoundException;
-use Arp\ContainerArray\Factory\ObjectFactory;
-use Arp\ContainerArray\Factory\ServiceFactoryInterface;
+use Arp\Container\Factory\ObjectFactory;
+use Arp\Container\Factory\ServiceFactoryInterface;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -16,7 +16,7 @@ use Psr\Container\NotFoundExceptionInterface;
  * @author  Alex Patterson <alex.patterson.webdev@gmail.com>
  * @package Arp\Container
  */
-final class ArrayContainer implements ContainerInterface
+final class Container implements ContainerInterface
 {
     /**
      * @var string[]
@@ -37,16 +37,6 @@ final class ArrayContainer implements ContainerInterface
      * @var string[]
      */
     private array $factoryClasses = [];
-
-    /**
-     * @param array $config
-     *
-     * @throws ContainerException
-     */
-    public function __construct(array $config = [])
-    {
-        $this->configure($config);
-    }
 
     /**
      * @param string $name Identifier of the entry to look for
@@ -220,42 +210,6 @@ final class ArrayContainer implements ContainerInterface
         }
 
         return $this->invokeFactory($factory, $name, $arguments);
-    }
-
-    /**
-     * @param array $config
-     *
-     * @return $this
-     *
-     * @throws ContainerException
-     */
-    public function configure(array $config): self
-    {
-        if (isset($config['services']) && is_array($config['services'])) {
-            foreach ($config['services'] as $name => $service) {
-                $this->set($name, $service);
-            }
-        }
-
-        if (isset($config['factories']) && is_array($config['factories'])) {
-            foreach ($config['factories'] as $name => $factory) {
-                $this->setFactory($name, $factory);
-            }
-        }
-
-        if (isset($config['factories_classes']) && is_array($config['factories_classes'])) {
-            foreach ($config['factories_classes'] as $name => $factoryClassName) {
-                $this->setFactoryClass($name, $factoryClassName);
-            }
-        }
-
-        if (isset($config['aliases']) && is_array($config['aliases'])) {
-            foreach ($config['aliases'] as $name => $alias) {
-                $this->setAlias($alias, $name);
-            }
-        }
-
-        return $this;
     }
 
     /**

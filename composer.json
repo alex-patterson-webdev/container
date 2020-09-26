@@ -1,6 +1,6 @@
 {
-  "name" : "alex-patterson-webdev/container-array",
-  "description": "Array based Implementation of the PSR-11 dependency Injection container",
+  "name" : "alex-patterson-webdev/container",
+  "description": "Simple implementation of the PSR-11 dependency injection container",
   "minimum-stability": "dev",
   "prefer-stable": true,
   "authors": [
@@ -13,20 +13,20 @@
     "psr/container-implementation" : "1.0.0"
   },
   "require": {
-    "php" : ">=7.4",
-    "alex-patterson-webdev/container" : "dev-feature/2.0.0"
+    "php" : ">=7.4"
   },
   "require-dev": {
-    "phpunit/phpunit" : "^9.2"
+    "phpunit/phpunit" : "^9.2",
+    "psr/container" : "^1"
   },
   "autoload": {
     "psr-4": {
-      "Arp\\ContainerArray\\" : "src/"
+      "Arp\\Container\\" : "src/"
     }
   },
   "autoload-dev": {
     "psr-4": {
-      "ArpTest\\ContainerArray\\" : "test/phpunit"
+      "ArpTest\\Container\\" : "test/phpunit"
     }
   },
   "scripts": {

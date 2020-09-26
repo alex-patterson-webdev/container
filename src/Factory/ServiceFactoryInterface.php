@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Arp\ContainerArray\Factory;
+namespace Arp\Container\Factory;
 
-use Arp\ContainerArray\Exception\ServiceFactoryException;
+use Arp\Container\Factory\Exception\ServiceFactoryException;
 use Psr\Container\ContainerInterface;
 
 /**
  * @author  Alex Patterson <alex.patterson.webdev@gmail.com>
- * @package Arp\ContainerArray\Factory
+ * @package Arp\Container\Factory
  */
 interface ServiceFactoryInterface
 {

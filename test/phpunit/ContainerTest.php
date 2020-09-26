@@ -4,29 +4,28 @@ declare(strict_types=1);
 
 namespace ArpTest\ContainerArray;
 
-use Arp\Container\Container;
 use Arp\Container\Exception\ContainerException;
 use Arp\Container\Exception\NotFoundException;
-use Arp\ContainerArray\ArrayContainer;
+use Arp\ContainerArray\Container;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
 /**
- * @covers \Arp\ContainerArray\ArrayContainer
+ * @covers \Arp\ContainerArray\Container
  *
  * @author  Alex Patterson <alex.patterson.webdev@gmail.com>
  * @package ArpTest\ContainerArray
  */
-final class ArrayContainerTest extends TestCase
+final class ContainerTest extends TestCase
 {
     /**
-     * Assert that the ArrayContainer implements ContainerInterface.
+     * Assert that the Container implements ContainerInterface.
      */
     public function testImplementsContainerInterface(): void
     {
-        $container = new ArrayContainer();
+        $container = new Container();
 
         $this->assertInstanceOf(ContainerInterface::class, $container);
     }
@@ -38,7 +37,7 @@ final class ArrayContainerTest extends TestCase
      */
     public function testHasWillAssertBooleanTrueForRegisteredService(): void
     {
-        $container = new ArrayContainer();
+        $container = new Container();
 
         $name = \stdClass::class;
         $service = new \stdClass();
@@ -57,7 +56,7 @@ final class ArrayContainerTest extends TestCase
      */
     public function testHasWillAssertBooleanFalseForNonRegisteredService(): void
     {
-        $container = new ArrayContainer();
+        $container = new Container();
 
         $name = \stdClass::class;
 
@@ -69,7 +68,7 @@ final class ArrayContainerTest extends TestCase
      */
     public function testGetWillReturnAServiceByName(): void
     {
-        $container = new ArrayContainer();
+        $container = new Container();
 
         $name = \stdClass::class;
         $service = new \stdClass();
@@ -86,7 +85,7 @@ final class ArrayContainerTest extends TestCase
      */
     public function testGetWillReturnAServiceByAliasName(): void
     {
-        $container = new ArrayContainer();
+        $container = new Container();
 
         $alias = 'foo';
         $name = \stdClass::class;
@@ -105,7 +104,7 @@ final class ArrayContainerTest extends TestCase
      */
     public function testGetWillThrowNotFoundExceptionIfRequestedServiceIsNotRegistered(): void
     {
-        $container = new ArrayContainer();
+        $container = new Container();
 
         $name = 'FooService';
 
@@ -122,7 +121,7 @@ final class ArrayContainerTest extends TestCase
      */
     public function testGetWillThrowContainerExceptionIfTheRegisteredFactoryIsNotCallable(): void
     {
-        $container = new ArrayContainer();
+        $container = new Container();
 
         $name = 'FooService';
         $factoryClassName = \stdClass::class;
@@ -152,7 +151,7 @@ final class ArrayContainerTest extends TestCase
         $name = CallableMock::class;
         $factoryClassName = CallableMock::class;
 
-        $container = new ArrayContainer();
+        $container = new Container();
         $container->setFactoryClass($name, $factoryClassName);
 
         $this->expectException(ContainerException::class);
@@ -172,7 +171,7 @@ final class ArrayContainerTest extends TestCase
      */
     public function testFactoryCreationErrorWillBeCaughtAndRethrownAsContainerException(): void
     {
-        $container = new ArrayContainer();
+        $container = new Container();
 
         $name = 'FooService';
         $exceptionMessage = 'This is another test exception message';
@@ -198,7 +197,7 @@ final class ArrayContainerTest extends TestCase
      */
     public function testGetWillCreateAndReturnUnregisteredServiceIfTheNameResolvesToAValidClassName(): void
     {
-        $container = new ArrayContainer();
+        $container = new Container();
 
         $name = \stdClass::class;
         $this->assertFalse($container->has($name));
