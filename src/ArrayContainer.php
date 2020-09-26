@@ -6,6 +6,8 @@ namespace Arp\ContainerArray;
 
 use Arp\Container\Exception\ContainerException;
 use Arp\Container\Exception\NotFoundException;
+use Arp\ContainerArray\Factory\ObjectFactory;
+use Arp\ContainerArray\Factory\ServiceFactoryInterface;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -14,7 +16,7 @@ use Psr\Container\NotFoundExceptionInterface;
  * @author  Alex Patterson <alex.patterson.webdev@gmail.com>
  * @package Arp\Container
  */
-class ArrayContainer implements ContainerInterface
+final class ArrayContainer implements ContainerInterface
 {
     /**
      * @var string[]
@@ -58,16 +60,6 @@ class ArrayContainer implements ContainerInterface
      */
     public function get($name)
     {
-        if (!is_string($name)) {
-            throw new ContainerException(
-                sprintf(
-                    'The \'name\' argument must be of type \'string\'; \'%s\' provided in \'%s\'',
-                    gettype($name),
-                    __FUNCTION__
-                )
-            );
-        }
-
         return $this->doGet($name);
     }
 
@@ -107,22 +99,21 @@ class ArrayContainer implements ContainerInterface
      *
      * @return bool
      *
-     * @throws ContainerException
-     *
      * @noinspection PhpMissingParamTypeInspection
+     * @noinspection ReturnTypeCanBeDeclaredInspection
      */
-    public function has($name): bool
+    public function has($name)
     {
-        if (!is_string($name)) {
-            throw new ContainerException(
-                sprintf(
-                    'The \'name\' argument must be of type \'string\'; \'%s\' provided in \'%s\'',
-                    gettype($name),
-                    __FUNCTION__
-                )
-            );
-        }
+        return $this->doHas($name);
+    }
 
+    /**
+     * @param string $name
+     *
+     * @return bool
+     */
+    private function doHas(string $name): bool
+    {
         return isset($this->services[$name])
             || isset($this->factories[$name])
             || isset($this->aliases[$name])
@@ -190,6 +181,12 @@ class ArrayContainer implements ContainerInterface
         if (!isset($this->services[$name])) {
             throw new ContainerException(
                 sprintf('Unable to configure alias \'%s\' for unknown service \'%s\'', $alias, $name)
+            );
+        }
+
+        if ($alias === $name) {
+            throw new ContainerException(
+                sprintf('Unable to configure alias \'%s\' with identical service name \'%s\'', $alias, $name)
             );
         }
 
@@ -274,6 +271,8 @@ class ArrayContainer implements ContainerInterface
     {
         try {
             return $factory($this, $name, $options);
+        } catch (ContainerExceptionInterface $e) {
+            throw $e;
         } catch (\Throwable $e) {
             throw new ContainerException(
                 sprintf('The service \'%s\' could not be created: %s', $name, $e->getMessage()),
@@ -289,8 +288,6 @@ class ArrayContainer implements ContainerInterface
      * @return callable|null
      *
      * @throws ContainerException
-     *
-     * @noinspection PhpUnusedParameterInspection
      */
     private function resolveFactory(string $name): ?callable
     {
@@ -300,9 +297,7 @@ class ArrayContainer implements ContainerInterface
         } elseif (isset($this->factoryClasses[$name][0])) {
             $factory = $this->resolveFactoryClass($name);
         } elseif (class_exists($name, true)) {
-            $factory = static function (ContainerInterface $container, string $name, array $arguments = []): object {
-                return new $name(...$arguments);
-            };
+            $factory = $this->createObjectFactory();
         }
 
         if (null !== $factory && !is_callable($factory)) {
@@ -315,6 +310,14 @@ class ArrayContainer implements ContainerInterface
     }
 
     /**
+     * @return ServiceFactoryInterface
+     */
+    private function createObjectFactory(): ServiceFactoryInterface
+    {
+        return new ObjectFactory();
+    }
+
+    /**
      * @param string $name
      *
      * @return array
@@ -323,30 +326,50 @@ class ArrayContainer implements ContainerInterface
      */
     private function resolveFactoryClass(string $name): array
     {
-        $className = $this->factoryClasses[$name][0] ?? null;
+        $factoryClassName = $this->factoryClasses[$name][0] ?? null;
 
-        if (null === $className || !class_exists($className, false)) {
+        if (null === $factoryClassName) {
             throw new ContainerException(
                 sprintf(
                     'Unable create service \'%s\': The factory class \'%s\' cannot be found',
                     $name,
-                    $className ?? ''
+                    $factoryClassName ?? ''
                 )
             );
         }
 
-        try {
-            $factory = new $className();
-        } catch (\Throwable $e) {
+        if (class_exists($factoryClassName, true) && !$this->has($factoryClassName)) {
+            $this->setFactory($factoryClassName, $this->createObjectFactory());
+        }
+
+        if ($factoryClassName === $name) {
             throw new ContainerException(
                 sprintf(
-                    'Failed to create factory class \'%s\' for service \'%s\': %s',
-                    $className,
+                    'A circular dependency was detected for service \'%s\' and the registered factory \'%s\'',
                     $name,
-                    $e->getMessage()
-                ),
-                $e->getCode(),
-                $e
+                    $factoryClassName
+                )
+            );
+        }
+
+        if (!$this->has($factoryClassName)) {
+            throw new ContainerException(
+                sprintf(
+                    'The factory service \'%s\', registered for service \'%s\', is not a valid service or class name',
+                    $factoryClassName,
+                    $name
+                )
+            );
+        }
+
+        $factory = $this->get($factoryClassName);
+        if (!is_callable($factory)) {
+            throw new ContainerException(
+                sprintf(
+                    'Factory \'%s\' registered for service \'%s\', must be callable',
+                    $factoryClassName,
+                    $name
+                )
             );
         }
 

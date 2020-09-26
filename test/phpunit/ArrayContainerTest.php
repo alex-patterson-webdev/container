@@ -31,43 +31,6 @@ final class ArrayContainerTest extends TestCase
     }
 
     /**
-     * Assert that a non string value, $name, will raise a ContainerException when passed to get.
-     *
-     * @param mixed $name
-     *
-     * @dataProvider getGetWithNonStringWillThrowInvalidArgumentExceptionData
-     *
-     * @throws ContainerExceptionInterface
-     */
-    public function testGetWithNonStringWillThrowInvalidArgumentException($name): void
-    {
-        $container = new ArrayContainer();
-
-        $this->expectException(ContainerExceptionInterface::class);
-        $this->expectExceptionMessage(
-            sprintf(
-                'The \'name\' argument must be of type \'string\'; \'%s\' provided in \'%s\'',
-                gettype($name),
-                'get'
-            )
-        );
-
-        $container->get($name);
-    }
-
-    /**
-     * @return array
-     */
-    public function getGetWithNonStringWillThrowInvalidArgumentExceptionData(): array
-    {
-        return [
-            [true],
-            [123],
-            [new \stdClass()]
-        ];
-    }
-
-    /**
      * Assert that has() will return true for a service that has been set on the container
      *
      * @throws ContainerExceptionInterface
