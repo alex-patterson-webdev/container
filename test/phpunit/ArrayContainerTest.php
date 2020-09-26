@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ArpTest\ContainerArray;
 
+use Arp\Container\Container;
 use Arp\Container\Exception\ContainerException;
 use Arp\Container\Exception\NotFoundException;
 use Arp\ContainerArray\ArrayContainer;
@@ -35,7 +36,7 @@ final class ArrayContainerTest extends TestCase
      *
      * @throws ContainerExceptionInterface
      */
-    public function testHasWillAssertBooleanForMatchingService(): void
+    public function testHasWillAssertBooleanTrueForRegisteredService(): void
     {
         $container = new ArrayContainer();
 
@@ -50,9 +51,23 @@ final class ArrayContainerTest extends TestCase
     }
 
     /**
+     * Assert that has() will return FALSE for a service that has NOT been set on the container
+     *
+     * @throws ContainerExceptionInterface
+     */
+    public function testHasWillAssertBooleanFalseForNonRegisteredService(): void
+    {
+        $container = new ArrayContainer();
+
+        $name = \stdClass::class;
+
+        $this->assertFalse($container->has($name));
+    }
+
+    /**
      * Assert that a value can be set and returned from the container.
      */
-    public function testAServiceThatIsSetWillBeReturnedByGet(): void
+    public function testGetWillReturnAServiceByName(): void
     {
         $container = new ArrayContainer();
 
@@ -62,6 +77,25 @@ final class ArrayContainerTest extends TestCase
         $container->set($name, $service);
 
         $this->assertSame($service, $container->get($name));
+    }
+
+    /**
+     * Assert that calls to get with a registered service alias will return the named service
+     *
+     * @throws ContainerExceptionInterface
+     */
+    public function testGetWillReturnAServiceByAliasName(): void
+    {
+        $container = new ArrayContainer();
+
+        $alias = 'foo';
+        $name = \stdClass::class;
+        $service = new \stdClass();
+
+        $container->set($name, $service);
+        $container->setAlias($alias, $name);
+
+        $this->assertSame($service, $container->get($alias));
     }
 
     /**
@@ -91,13 +125,43 @@ final class ArrayContainerTest extends TestCase
         $container = new ArrayContainer();
 
         $name = 'FooService';
-        $factory = \stdClass::class;
+        $factoryClassName = \stdClass::class;
 
-        $container->setFactoryClass($name, $factory);
+        $container->setFactoryClass($name, $factoryClassName);
 
         $this->expectException(ContainerException::class);
         $this->expectExceptionMessage(
-            sprintf('Unable to create service \'%s\': The registered factory is not callable', $name)
+            sprintf(
+                'Factory \'%s\' registered for service \'%s\', must be callable',
+                $factoryClassName,
+                $name
+            )
+        );
+
+        $container->get($name);
+    }
+
+    /**
+     * Assert that circular dependencies between a service name and it's factory are resolved by throwing
+     * a ContainerException
+     *
+     * @throws ContainerExceptionInterface
+     */
+    public function testCircularDependencyWithFactoryClassNameWillThrowContainerException(): void
+    {
+        $name = CallableMock::class;
+        $factoryClassName = CallableMock::class;
+
+        $container = new ArrayContainer();
+        $container->setFactoryClass($name, $factoryClassName);
+
+        $this->expectException(ContainerException::class);
+        $this->expectDeprecationMessage(
+            sprintf(
+                'A circular dependency was detected for service \'%s\' and the registered factory \'%s\'',
+                $name,
+                $factoryClassName
+            )
         );
 
         $container->get($name);
@@ -125,5 +189,23 @@ final class ArrayContainerTest extends TestCase
         );
 
         $container->get($name);
+    }
+
+    /**
+     * Assert that an unregistered service, which resolves to the name of a valid class, will be created and
+     * registered with the container. Additional calls to the container's get() method should also return the same
+     * service
+     */
+    public function testGetWillCreateAndReturnUnregisteredServiceIfTheNameResolvesToAValidClassName(): void
+    {
+        $container = new ArrayContainer();
+
+        $name = \stdClass::class;
+        $this->assertFalse($container->has($name));
+        $service = $container->get(\stdClass::class);
+
+        $this->assertInstanceOf($name, $service);
+        $this->assertTrue($container->has($name));
+        $this->assertSame($service, $container->get($name));
     }
 }

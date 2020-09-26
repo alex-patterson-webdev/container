@@ -295,7 +295,11 @@ final class ArrayContainer implements ContainerInterface
         if (isset($this->factories[$name])) {
             $factory = $this->factories[$name];
         } elseif (isset($this->factoryClasses[$name][0])) {
-            $factory = $this->resolveFactoryClass($name);
+            $factory = $this->resolveFactoryClass(
+                $name,
+                $this->factoryClasses[$name][0],
+                $this->factoryClasses[$name][0] ?? null
+            );
         } elseif (class_exists($name, true)) {
             $factory = $this->createObjectFactory();
         }
@@ -318,30 +322,16 @@ final class ArrayContainer implements ContainerInterface
     }
 
     /**
-     * @param string $name
+     * @param string      $name
+     * @param string      $factoryClassName
+     * @param string|null $methodName
      *
      * @return array
      *
      * @throws ContainerException
      */
-    private function resolveFactoryClass(string $name): array
+    private function resolveFactoryClass(string $name, string $factoryClassName, ?string $methodName): array
     {
-        $factoryClassName = $this->factoryClasses[$name][0] ?? null;
-
-        if (null === $factoryClassName) {
-            throw new ContainerException(
-                sprintf(
-                    'Unable create service \'%s\': The factory class \'%s\' cannot be found',
-                    $name,
-                    $factoryClassName ?? ''
-                )
-            );
-        }
-
-        if (class_exists($factoryClassName, true) && !$this->has($factoryClassName)) {
-            $this->setFactory($factoryClassName, $this->createObjectFactory());
-        }
-
         if ($factoryClassName === $name) {
             throw new ContainerException(
                 sprintf(
@@ -350,6 +340,10 @@ final class ArrayContainer implements ContainerInterface
                     $factoryClassName
                 )
             );
+        }
+
+        if (class_exists($factoryClassName, true) && !$this->has($factoryClassName)) {
+            $this->setFactory($factoryClassName, $this->createObjectFactory());
         }
 
         if (!$this->has($factoryClassName)) {
@@ -362,7 +356,7 @@ final class ArrayContainer implements ContainerInterface
             );
         }
 
-        $factory = $this->get($factoryClassName);
+        $factory = [$this->get($factoryClassName), $methodName ?? '__invoke'];
         if (!is_callable($factory)) {
             throw new ContainerException(
                 sprintf(
@@ -373,6 +367,6 @@ final class ArrayContainer implements ContainerInterface
             );
         }
 
-        return [$factory, $this->factoryClasses[$name][1] ?? '__invoke'];
+        return $factory;
     }
 }
