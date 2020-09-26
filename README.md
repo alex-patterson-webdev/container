@@ -1,8 +1,8 @@
-[![Build Status](https://travis-ci.com/alex-patterson-webdev/container-array.svg?branch=master)](https://travis-ci.com/alex-patterson-webdev/container-array)
-[![codecov](https://codecov.io/gh/alex-patterson-webdev/container-array/branch/master/graph/badge.svg)](https://codecov.io/gh/alex-patterson-webdev/container-array)
-[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/alex-patterson-webdev/container-array/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/alex-patterson-webdev/container-array/?branch=master)
+[![Build Status](https://travis-ci.com/alex-patterson-webdev/container-array.svg?branch=master)](https://travis-ci.com/alex-patterson-webdev/container)
+[![codecov](https://codecov.io/gh/alex-patterson-webdev/container-array/branch/master/graph/badge.svg)](https://codecov.io/gh/alex-patterson-webdev/container)
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/alex-patterson-webdev/container-array/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/alex-patterson-webdev/container/?branch=master)
 
-# Arp\ContainerArray
+# Arp\Container
 
 ## About
 
@@ -13,19 +13,19 @@ and factories for inversion of control
 
 Installation via [Composer](https://getcomposer.org).
 
-    require alex-patterson-webdev/container-array ^1
+    require alex-patterson-webdev/container ^1
  
 ## Usage
 
 To begin using the container, we simply need to create an instance of it
 
-    use Arp\ArrayContainer\Container;
+    use Arp\Container\Container;
     
     $container = new Container();
 
-The `Arp\ArrayContainer\Container` implements the `Psr\ContainerInterface` and therefore can be used to check and fetch services by name.
+The `Arp\Container\Container` implements the `Psr\ContainerInterface` and therefore can be used to check and fetch services by name.
 
-    use Arp\ArrayContainer\Container;
+    use Arp\Container\Container;
     
     if (true === $container->has('ServiceName')) {
         $service = $container->get('ServiceName');
@@ -39,7 +39,7 @@ the method you choose will depend on how you wish the service to be created by t
 
 ### Objects and Values
 
-The simplest use case is when you need to add an object or value to the container. As these values not require instantiation or other dependnecies the 
+The simplest use case is when you need to add an object or value to the container. As these values not require instantiation or other dependencies the 
 container will simply store and return this value unmodified when requested from the container.
 
     $container = new Container();
@@ -49,9 +49,9 @@ container will simply store and return this value unmodified when requested from
 ### Classes Registration
 
 The container is able to create services from factory classes. If your class has no dependencies, and the name you register matches the fully qualified class name, calls to get
-will create the class using the `Arp\ArrayContainer\Factory\ObjectFactory` automatically, no service registration is required.
+will create the class using the `Arp\Container\Factory\ObjectFactory` automatically, no service registration is required.
 
-        use Arp\ArrayContainer\Factory\ObjectFactory;
+        use Arp\Container\Factory\ObjectFactory;
     
         $container = new Container();
         
@@ -59,9 +59,9 @@ will create the class using the `Arp\ArrayContainer\Factory\ObjectFactory` autom
         // where the service name matches the FQCN
         $object = $container->get(\stdClass::class);
 
-It is recommended for clarity that you explicitly define the service using  `Arp\ArrayContainer\Factory\ObjectFactory`.
+It is recommended for clarity that you explicitly define the service using  `Arp\Container\Factory\ObjectFactory`.
 
-    use Arp\ArrayContainer\Factory\ObjectFactory;
+    use Arp\Container\Factory\ObjectFactory;
 
     $container = new Container();
     $container->setFactory(\stdClass::class, ObjectFactory::class); 
@@ -72,7 +72,7 @@ It is recommended for clarity that you explicitly define the service using  `Arp
 You can also define you own factories for more complex object creation. Factories can be of any php `callable` type and 
 allow the service name to differ from the created service.
 
-    use Arp\ArrayContainer\Factory\ObjectFactory;
+    use Arp\Container\Factory\ObjectFactory;
 
     $container = new Container();
     $container->setFactory('FooService', static function() {
