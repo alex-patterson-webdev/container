@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace ArpTest\ContainerArray;
+namespace ArpTest\Container;
 
 /**
  * @author  Alex Patterson <alex.patterson.webdev@gmail.com>
- * @package ArpTest\ContainerArray
+ * @package ArpTest\Container
  */
 class CallableMock
 {

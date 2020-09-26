@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace ArpTest\ContainerArray\Factory;
+namespace ArpTest\Container\Factory;
 
-use Arp\ContainerArray\Factory\ObjectFactory;
-use Arp\ContainerArray\Factory\ServiceFactoryInterface;
+use Arp\Container\Factory\ObjectFactory;
+use Arp\Container\Factory\ServiceFactoryInterface;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers \Arp\ContainerArray\Factory\ObjectFactory
+ * @covers \Arp\Container\Factory\ObjectFactory
  *
  * @author  Alex Patterson <alex.patterson.webdev@gmail.com>
- * @package ArpTest\ContainerArray\Factory
+ * @package ArpTest\Container\Factory
  */
 final class ObjectFactoryTest extends TestCase
 {

@@ -6,14 +6,15 @@ namespace ArpTest\ContainerArray;
 
 use Arp\Container\Exception\ContainerException;
 use Arp\Container\Exception\NotFoundException;
-use Arp\ContainerArray\Container;
+use Arp\Container\Container;
+use ArpTest\Container\CallableMock;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
 /**
- * @covers \Arp\ContainerArray\Container
+ * @covers \Arp\Container\Container
  *
  * @author  Alex Patterson <alex.patterson.webdev@gmail.com>
  * @package ArpTest\ContainerArray
