@@ -8,6 +8,8 @@ use Arp\Container\Exception\ContainerException;
 use Arp\Container\Exception\NotFoundException;
 use Arp\Container\Factory\ObjectFactory;
 use Arp\Container\Factory\ServiceFactoryInterface;
+use Arp\Container\Provider\Exception\ServiceProviderException;
+use Arp\Container\Provider\ServiceProviderInterface;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -37,6 +39,18 @@ final class Container implements ContainerInterface
      * @var string[]
      */
     private array $factoryClasses = [];
+
+    /**
+     * @param ServiceProviderInterface|null $serviceProvider
+     *
+     * @throws ContainerException
+     */
+    public function __construct(ServiceProviderInterface $serviceProvider = null)
+    {
+        if (null !== $serviceProvider) {
+            $this->configure($serviceProvider);
+        }
+    }
 
     /**
      * @param string $name Identifier of the entry to look for
@@ -322,5 +336,27 @@ final class Container implements ContainerInterface
         }
 
         return $factory;
+    }
+
+    /**
+     * @param ServiceProviderInterface $serviceProvider
+     *
+     * @throws ContainerException
+     */
+    public function configure(ServiceProviderInterface $serviceProvider): void
+    {
+        try {
+            $serviceProvider->registerServices($this);
+        } catch (ServiceProviderException $e) {
+            throw new ContainerException(
+                sprintf(
+                    'Failed to register services using provider \'%s\': %s',
+                    get_class($serviceProvider),
+                    $e->getMessage()
+                ),
+                $e->getCode(),
+                $e
+            );
+        }
     }
 }

@@ -6,8 +6,7 @@
 
 ## About
 
-A PSR-11 compatible Dependency Injection Container which used array configuration for service registration
-and factories for inversion of control
+A simple PSR-11 compatible Dependency Injection Container
  
 ## Installation
 
@@ -31,57 +30,63 @@ The `Arp\Container\Container` implements the `Psr\ContainerInterface` and theref
         $service = $container->get('ServiceName');
     }
     
-## Registering Services
+## Registering services with the container
 
-In order to be able to fetch services from the container, we must first register them. All services require a unique name to be provided when registering.
-This name is the value we use after to fetch the service via `$container->get()`. There are a number of different ways we can register a service with the container,
-the method you choose will depend on how you wish the service to be created by the container or if the service when created has other dependencies to resolve.
+There are a number of different ways we can register a 'service' with the container, the method you choose will depend on how you wish the 
+service to be created.
+
+The service name is conventionally the fully qualified class name of the service being created. This helps reduce 
+confusion on file locations in relation to services, and we can also reduce configuration by using the PHP `::class` constant. 
 
 ### Objects and Values
 
-The simplest use case is when you need to add an object or value to the container. As these values not require instantiation or other dependencies the 
-container will simply store and return this value unmodified when requested from the container.
+The simplest use case is when you need to `set()` an object or value on the container. These values do not require 
+instantiation, the container will simply store and return this value unmodified when requested via `get()`.
 
     $container = new Container();
-    $container->setService('TodaysDate', new \DateTime('today'));
+    $container->set('TodaysDate', new \DateTime('today'));
     $todaysDate = $container->get('TodaysDate');
        
-### Classes Registration
+### Factories
 
-The container is able to create services from factory classes. If your class has no dependencies, and the name you register matches the fully qualified class name, calls to get
-will create the class using the `Arp\Container\Factory\ObjectFactory` automatically, no service registration is required.
-
-        use Arp\Container\Factory\ObjectFactory;
-    
-        $container = new Container();
-        
-        // Create an new object instance from a non-registered service name 
-        // where the service name matches the FQCN
-        $object = $container->get(\stdClass::class);
-
-It is recommended for clarity that you explicitly define the service using  `Arp\Container\Factory\ObjectFactory`.
-
-    use Arp\Container\Factory\ObjectFactory;
+Factories provide us a location to construct and resolve dependencies using the container. The factory can be any php `callable`. 
 
     $container = new Container();
-    $container->setFactory(\stdClass::class, ObjectFactory::class); 
+    $container->setFactory('TodaysDate', static function() {
+        return new \DateTime('today');
+    });
     
-    // @var \stdClass $object
-    $object = $container->get(\stdClass::class);
+When invoked the factory class will also have the container injected into it as the first argument. We can use the container to
+resolve other dependencies.
 
-You can also define you own factories for more complex object creation. Factories can be of any php `callable` type and 
-allow the service name to differ from the created service.
+    $container->setFactory('TodaysDateService', static function(ContainerInterface $container) {
+        return new TodayDateService($container->get('TodaysDate');
+    });
+    
+We also have access to the requested service name as the second argument, `$name`. By being aware of the name of the service which
+is being created it can allow us to create reusable factories.
 
-    use Arp\Container\Factory\ObjectFactory;
+            $factory = static function(ContainerInterface $container, string $name) {
+               $todaysDate = $container->get('TodaysDate');
+               if ('EnglishDateService' === $name) {
+                    return new EnglishDateService($todaysDate);
+               }
+               return new FrenchDateService($todaysDate);
+           };
+           
+            $container->setFactory('EnglishDateService', $factory);
+            $container->setFactory('FrenchDateService', $factory);
 
+In cases where you need have a service without dependencies we can use the `ObjectFactory` and the container will create the
+ class for us based on the service `$name`. If the service `$name` is not a valid class name an exception is thrown.
+ 
     $container = new Container();
-    $container->setFactory('FooService', static function() {
-        return new \stdClass();
-    }); 
+    $container->setFactory(\stdClass(), ObjectFactory::class);
     
     // @var \stdClass $object
-    $object = $container->get('FooService);
-
-The factory 'callables' are also provided with a number of arguments to allow us to resolve other dependencies inside 
-other service factories.
+    $object = $container->get(\stcClass());
+    
+_The above configuration isn't explicitly required as any service `$name` using a FQCN not registered with the container 
+with be automatically registered to use `ObjectFactory`. For clarity, it is recommended that you explicitly 
+define the service_.
 
