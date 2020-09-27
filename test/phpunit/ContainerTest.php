@@ -152,6 +152,48 @@ final class ContainerTest extends TestCase
     }
 
     /**
+     * Assert that we can pass a factory class name string to setFactory() and the service will be registered
+     *
+     * @throws ContainerException
+     * @throws InvalidArgumentException
+     */
+    public function testStringFactoryPassedToSetFactoryIsRegistered(): void
+    {
+        $container = new Container();
+
+        $this->assertFalse($container->has('Test'));
+        $container->setFactory('Test', 'ThisIsAFactoryString');
+        $this->assertTrue($container->has('Test'));
+    }
+
+    /**
+     * Assert that a InvalidArgumentException is thrown if trying to set a non-string or not callable $factory
+     * when calling setFactory().
+     *
+     * @throws ContainerException
+     * @throws InvalidArgumentException
+     */
+    public function testSetFactoryWithNonStringOrCallableWillThrowInvalidArgumentException(): void
+    {
+        $container = new Container();
+
+        $name = \stdClass::class;
+        $factory = new \stdClass();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage(
+            sprintf(
+                'The \'factory\' argument must be of type \'string\' or \'callable\';'
+                . '\'%s\' provided for service \'%s\'',
+                is_object($factory) ? get_class($factory) : gettype($factory),
+                $name
+            )
+        );
+
+        $container->setFactory($name, $factory);
+    }
+
+    /**
      * Assert that circular dependencies between a service name and it's factory are resolved by throwing
      * a ContainerException
      *
