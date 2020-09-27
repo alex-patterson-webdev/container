@@ -312,9 +312,7 @@ final class Container implements ContainerInterface
         }
 
         if (null !== $factory && !is_callable($factory)) {
-            throw new ContainerException(
-                sprintf('Unable to create service \'%s\': The registered factory is not callable', $name)
-            );
+            throw new ContainerException(sprintf('Factory registered for service \'%s\', must be callable', $name));
         }
 
         return $factory;
@@ -359,18 +357,7 @@ final class Container implements ContainerInterface
             );
         }
 
-        $factory = [$this->get($factoryClassName), $methodName ?? '__invoke'];
-        if (!is_callable($factory)) {
-            throw new ContainerException(
-                sprintf(
-                    'Factory \'%s\' registered for service \'%s\', must be callable',
-                    $factoryClassName,
-                    $name
-                )
-            );
-        }
-
-        return $factory;
+        return [$this->get($factoryClassName), $methodName ?? '__invoke'];
     }
 
     /**

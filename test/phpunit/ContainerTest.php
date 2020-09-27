@@ -183,13 +183,7 @@ final class ContainerTest extends TestCase
         $container->setFactoryClass($name, $factoryClassName);
 
         $this->expectException(ContainerException::class);
-        $this->expectExceptionMessage(
-            sprintf(
-                'Factory \'%s\' registered for service \'%s\', must be callable',
-                $factoryClassName,
-                $name
-            )
-        );
+        $this->expectExceptionMessage(sprintf('Factory registered for service \'%s\', must be callable', $name));
 
         $container->get($name);
     }
