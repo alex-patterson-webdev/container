@@ -128,6 +128,7 @@ final class Container implements ContainerInterface
      *
      * @return mixed
      *
+     * @throws ContainerException
      * @throws NotFoundException
      */
     public function build(string $name, array $arguments = [])
@@ -318,14 +319,6 @@ final class Container implements ContainerInterface
     }
 
     /**
-     * @return ServiceFactoryInterface
-     */
-    private function createObjectFactory(): ServiceFactoryInterface
-    {
-        return new ObjectFactory();
-    }
-
-    /**
      * @param string      $name
      * @param string      $factoryClassName
      * @param string|null $methodName
@@ -379,5 +372,13 @@ final class Container implements ContainerInterface
                 $e
             );
         }
+    }
+
+    /**
+     * @return ServiceFactoryInterface
+     */
+    private function createObjectFactory(): ServiceFactoryInterface
+    {
+        return new ObjectFactory();
     }
 }
