@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace ArpTest\ContainerArray;
+namespace ArpTest\Container;
 
-use Arp\Container\Exception\ContainerException;
-use Arp\Container\Exception\NotFoundException;
 use Arp\Container\Container;
-use ArpTest\Container\CallableMock;
+use Arp\Container\Exception\CircularDependencyException;
+use Arp\Container\Exception\ContainerException;
+use Arp\Container\Exception\InvalidArgumentException;
+use Arp\Container\Exception\NotFoundException;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
-use Psr\Container\NotFoundExceptionInterface;
 
 /**
- * @covers \Arp\Container\Container
+ * @covers  \Arp\Container\Container
  *
  * @author  Alex Patterson <alex.patterson.webdev@gmail.com>
  * @package ArpTest\ContainerArray
@@ -66,6 +66,10 @@ final class ContainerTest extends TestCase
 
     /**
      * Assert that a value can be set and returned from the container.
+     *
+     * @throws CircularDependencyException
+     * @throws ContainerException
+     * @throws NotFoundException
      */
     public function testGetWillReturnAServiceByName(): void
     {
@@ -99,9 +103,54 @@ final class ContainerTest extends TestCase
     }
 
     /**
+     * Assert that a ContainerException is thrown when trying to register a service alias for an unregistered service
+     *
+     * @throws InvalidArgumentException
+     */
+    public function testSetAliasWillThrowContainerExceptionIfTheServiceNameAliasedHasNotBeenRegistered(): void
+    {
+        $container = new Container();
+
+        $alias = 'FooService';
+        $name = 'TestService';
+
+        $this->expectException(ContainerException::class);
+        $this->expectExceptionMessage(
+            sprintf('Unable to configure alias \'%s\' for unknown service \'%s\'', $alias, $name)
+        );
+
+        $container->setAlias($alias, $name);
+    }
+
+    /**
+     * Assert that a ContainerException is thrown when trying to register a service alias with a service that
+     * has an identical name
+     *
+     * @throws InvalidArgumentException
+     */
+    public function testSetAliasWillThrowContainerExceptionIfTheServiceNameIsIdenticalToTheAlias(): void
+    {
+        $container = new Container();
+
+        $alias = 'TestService';
+        $name = 'TestService';
+
+        $container->set($name, new \stdClass());
+
+        $this->expectException(ContainerException::class);
+        $this->expectExceptionMessage(
+            sprintf('Unable to configure alias \'%s\' with identical service name \'%s\'', $alias, $name)
+        );
+
+        $container->setAlias($alias, $name);
+    }
+
+    /**
      * Assert that the container will throw a NotFoundException if the requested service cannot be found.
      *
-     * @throws NotFoundExceptionInterface
+     * @throws CircularDependencyException
+     * @throws ContainerException
+     * @throws NotFoundException
      */
     public function testGetWillThrowNotFoundExceptionIfRequestedServiceIsNotRegistered(): void
     {
@@ -119,6 +168,10 @@ final class ContainerTest extends TestCase
 
     /**
      * Assert that a invalid/non-callable factory class will throw a ContainerException.
+     *
+     * @throws CircularDependencyException
+     * @throws ContainerException
+     * @throws NotFoundException
      */
     public function testGetWillThrowContainerExceptionIfTheRegisteredFactoryIsNotCallable(): void
     {
@@ -130,15 +183,51 @@ final class ContainerTest extends TestCase
         $container->setFactoryClass($name, $factoryClassName);
 
         $this->expectException(ContainerException::class);
+        $this->expectExceptionMessage(sprintf('Factory registered for service \'%s\', must be callable', $name));
+
+        $container->get($name);
+    }
+
+    /**
+     * Assert that we can pass a factory class name string to setFactory() and the service will be registered
+     *
+     * @throws ContainerException
+     * @throws InvalidArgumentException
+     */
+    public function testStringFactoryPassedToSetFactoryIsRegistered(): void
+    {
+        $container = new Container();
+
+        $this->assertFalse($container->has('Test'));
+        $container->setFactory('Test', 'ThisIsAFactoryString');
+        $this->assertTrue($container->has('Test'));
+    }
+
+    /**
+     * Assert that a InvalidArgumentException is thrown if trying to set a non-string or not callable $factory
+     * when calling setFactory().
+     *
+     * @throws ContainerException
+     * @throws InvalidArgumentException
+     */
+    public function testSetFactoryWithNonStringOrCallableWillThrowInvalidArgumentException(): void
+    {
+        $container = new Container();
+
+        $name = \stdClass::class;
+        $factory = new \stdClass();
+
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage(
             sprintf(
-                'Factory \'%s\' registered for service \'%s\', must be callable',
-                $factoryClassName,
+                'The \'factory\' argument must be of type \'string\' or \'callable\';'
+                . '\'%s\' provided for service \'%s\'',
+                is_object($factory) ? get_class($factory) : gettype($factory),
                 $name
             )
         );
 
-        $container->get($name);
+        $container->setFactory($name, $factory);
     }
 
     /**
@@ -147,7 +236,7 @@ final class ContainerTest extends TestCase
      *
      * @throws ContainerExceptionInterface
      */
-    public function testCircularDependencyWithFactoryClassNameWillThrowContainerException(): void
+    public function testCircularConfigurationDependencyWithFactoryClassNameWillThrowContainerException(): void
     {
         $name = CallableMock::class;
         $factoryClassName = CallableMock::class;
@@ -157,11 +246,7 @@ final class ContainerTest extends TestCase
 
         $this->expectException(ContainerException::class);
         $this->expectDeprecationMessage(
-            sprintf(
-                'A circular dependency was detected for service \'%s\' and the registered factory \'%s\'',
-                $name,
-                $factoryClassName
-            )
+            sprintf('A circular configuration dependency was detected for service \'%s\'', $name)
         );
 
         $container->get($name);
@@ -169,6 +254,8 @@ final class ContainerTest extends TestCase
 
     /**
      * Assert that the container will throw a ContainerException is the registered factory throws an exception.
+     *
+     * @throws ContainerException
      */
     public function testFactoryCreationErrorWillBeCaughtAndRethrownAsContainerException(): void
     {
@@ -195,6 +282,10 @@ final class ContainerTest extends TestCase
      * Assert that an unregistered service, which resolves to the name of a valid class, will be created and
      * registered with the container. Additional calls to the container's get() method should also return the same
      * service
+     *
+     * @throws CircularDependencyException
+     * @throws ContainerException
+     * @throws NotFoundException
      */
     public function testGetWillCreateAndReturnUnregisteredServiceIfTheNameResolvesToAValidClassName(): void
     {
@@ -207,5 +298,159 @@ final class ContainerTest extends TestCase
         $this->assertInstanceOf($name, $service);
         $this->assertTrue($container->has($name));
         $this->assertSame($service, $container->get($name));
+    }
+
+    /**
+     * When creating factories with dependencies, ensure we catch any attempts to load services that depend on each
+     * other by throwing a ContainerException
+     *
+     * @throws CircularDependencyException
+     * @throws ContainerException
+     * @throws InvalidArgumentException
+     * @throws NotFoundException
+     */
+    public function testGetWillThrowContainerExceptionIfAFactoryDependencyCausesACircularCreationDependency(): void
+    {
+        $container = new Container();
+
+        $factoryA = static function (ContainerInterface $container) {
+            $serviceA = new \stdClass();
+            $serviceA->serviceB = $container->get('ServiceB');
+            return $serviceA;
+        };
+
+        $factoryB = static function (ContainerInterface $container) {
+            $serviceB = new \stdClass();
+            $serviceB->serviceA = $container->get('ServiceA');
+            return $serviceB;
+        };
+
+        $container->setFactory('ServiceA', $factoryA);
+        $container->setFactory('ServiceB', $factoryB);
+
+        $this->expectException(CircularDependencyException::class);
+        $this->expectExceptionMessage(
+            sprintf(
+                'A circular dependency has been detected for service \'%s\'. The dependency graph includes %s',
+                'ServiceA',
+                implode(',', ['ServiceA', 'ServiceB'])
+            )
+        );
+
+        $container->get('ServiceA');
+    }
+
+    /**
+     * When calling get() for a service that has an invalid (not callable) factory class name a ContainerException
+     * should be thrown
+     *
+     * @throws ContainerException
+     */
+    public function testGetWillThrowContainerExceptionForInvalidRegisteredFactoryClassName(): void
+    {
+        $container = new Container();
+
+        $serviceName = 'FooService';
+        $factoryClassName = 'Foo\\Bar\\ClassNameThatDoesNotExist';
+
+        // We should be able to add the invalid class without issues
+        $container->setFactoryClass($serviceName, $factoryClassName);
+
+        $this->expectException(ContainerException::class);
+        $this->expectExceptionMessage(
+            sprintf(
+                'The factory service \'%s\', registered for service \'%s\', is not a valid service or class name',
+                $factoryClassName,
+                $serviceName
+            )
+        );
+
+        // It is only when we requested the service via get that the factory creation should fail
+        $container->get($serviceName);
+    }
+
+    /**
+     * Assert that if we try to build a service and we cannot resolve a factory from then a NotFoundException is thrown
+     *
+     * @throws ContainerException
+     */
+    public function testBuildWillThrowNotFoundExceptionIfTheFactoryCannotBeResolvedFromName(): void
+    {
+        $container = new Container();
+
+        $name = 'FooService';
+
+        $this->expectException(NotFoundException::class);
+        $this->expectExceptionMessage(
+            sprintf('Unable to build service \'%s\': No valid factory could be found', $name)
+        );
+
+        $container->build($name);
+    }
+
+    /**
+     * Assert that when creating a service via build(), any previously set service matching the provided $name
+     * will be ignored and a new instance will be returned. We additional check that the build also will not modify
+     * or change the previous service and calls to get() will return the existing value
+     *
+     * @throws CircularDependencyException
+     * @throws ContainerException
+     * @throws InvalidArgumentException
+     * @throws NotFoundException
+     */
+    public function testBuildWillIgnorePreviouslySetServiceWhenCreatingViaFactory(): void
+    {
+        $container = new Container();
+
+        $serviceName = 'ServiceName';
+
+        // Define our service
+        $container->setFactory(
+            $serviceName,
+            static function () {
+                return new \stdClass();
+            }
+        );
+
+        // Request it by it's service name  so we 'set' the service
+        $service = $container->get($serviceName);
+
+        $builtService = $container->build($serviceName);
+
+        $this->assertInstanceOf(\stdClass::class, $service);
+        $this->assertInstanceOf(\stdClass::class, $builtService);
+
+        // The services should not be the same object instance
+        $this->assertNotSame($service, $builtService);
+
+        // We expect the existing service to not have been modified and additional calls to get
+        // resolve to the existing set service (and will not execute the factory)
+        $this->assertSame($service, $container->get($serviceName));
+    }
+
+
+    /**
+     * Assert that an alias service name will correctly resolve the the correct service when calling build()
+     *
+     * @throws InvalidArgumentException
+     * @throws NotFoundException
+     */
+    public function testBuildWillResolveAliasToServiceName(): void
+    {
+        $container = new Container();
+
+        $alias = 'FooAliasName';
+        $name = 'FooServiceName';
+
+        // Define our service
+        $container->setFactory(
+            $name,
+            static function () {
+                return new \stdClass();
+            }
+        );
+        $container->setAlias($alias, $name);
+
+        $this->assertInstanceOf(\stdClass::class, $container->build($alias));
     }
 }

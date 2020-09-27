@@ -24,8 +24,6 @@ To begin using the container, we simply need to create an instance of it
 
 The `Arp\Container\Container` implements the `Psr\ContainerInterface` and therefore can be used to check and fetch services by name.
 
-    use Arp\Container\Container;
-    
     if (true === $container->has('ServiceName')) {
         $service = $container->get('ServiceName');
     }
@@ -49,7 +47,7 @@ instantiation, the container will simply store and return this value unmodified 
        
 ### Factories
 
-Factories provide us a location to construct and resolve dependencies using the container. The factory can be any php `callable`. 
+Factories provide us a location to construct and resolve dependencies using the container. The factory can be any php `callable`.
 
     $container = new Container();
     $container->setFactory('TodaysDate', static function() {
@@ -64,22 +62,25 @@ resolve other dependencies.
     });
     
 We also have access to the requested service name as the second argument, `$name`. By being aware of the name of the service which
-is being created it can allow us to create reusable factories.
+is being created it allows the creation of reusable factories.
 
-            $factory = static function(ContainerInterface $container, string $name) {
-               $todaysDate = $container->get('TodaysDate');
-               if ('EnglishDateService' === $name) {
-                    return new EnglishDateService($todaysDate);
-               }
-               return new FrenchDateService($todaysDate);
-           };
-           
-            $container->setFactory('EnglishDateService', $factory);
-            $container->setFactory('FrenchDateService', $factory);
+    $factory = static function(ContainerInterface $container, string $name) {
+       $todaysDate = $container->get('TodaysDate');
+       if ('EnglishDateService' === $name) {
+            return new EnglishDateService($todaysDate);
+       }
+       return new FrenchDateService($todaysDate);
+   };
+   
+    $container->setFactory('EnglishDateService', $factory);
+    $container->setFactory('FrenchDateService', $factory);
+    
+### Object Factory
 
-In cases where you need have a service without dependencies we can use the `ObjectFactory` and the container will create the
+In cases where you need have a service without dependencies we can use the `Arp\Container\Factory\ObjectFactory` and the container will create the
  class for us based on the service `$name`. If the service `$name` is not a valid class name an exception is thrown.
  
+    use Arp\Container\Factory\ObjectFactory;
     $container = new Container();
     $container->setFactory(\stdClass(), ObjectFactory::class);
     
