@@ -9,6 +9,9 @@ use Arp\Container\Exception\CircularDependencyException;
 use Arp\Container\Exception\ContainerException;
 use Arp\Container\Exception\InvalidArgumentException;
 use Arp\Container\Exception\NotFoundException;
+use Arp\Container\Provider\Exception\ServiceProviderException;
+use Arp\Container\Provider\ServiceProviderInterface;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
@@ -100,6 +103,24 @@ final class ContainerTest extends TestCase
         $container->setAlias($alias, $name);
 
         $this->assertSame($service, $container->get($alias));
+    }
+
+    /**
+     * Assert that our README code example is working
+     *
+     * @throws CircularDependencyException
+     * @throws ContainerException
+     * @throws NotFoundException
+     */
+    public function testTheDateOfTodayExampleInReadMe(): void
+    {
+        $container = new Container();
+
+        $name = 'TheDateOfToday';
+        $service = new \DateTime('today');
+        $container->set($name, $service);
+
+        $this->assertSame($service, $container->get($name));
     }
 
     /**
@@ -432,6 +453,7 @@ final class ContainerTest extends TestCase
     /**
      * Assert that an alias service name will correctly resolve the the correct service when calling build()
      *
+     * @throws ContainerException
      * @throws InvalidArgumentException
      * @throws NotFoundException
      */
@@ -452,5 +474,95 @@ final class ContainerTest extends TestCase
         $container->setAlias($alias, $name);
 
         $this->assertInstanceOf(\stdClass::class, $container->build($alias));
+    }
+
+    /**
+     * Assert that configuration errors will raise a ContainerException
+     *
+     * @throws ContainerException
+     */
+    public function testConfigureWillThrowAContainerExceptionIfTheConfigurationFails(): void
+    {
+        $container = new Container();
+
+        /** @var ServiceProviderInterface|MockObject $provider */
+        $provider = $this->getMockForAbstractClass(ServiceProviderInterface::class);
+
+        $exceptionMessage = 'This is a test exception message';
+        $exceptionCode = 12345;
+        $exception = new ServiceProviderException($exceptionMessage, $exceptionCode);
+
+        $provider->expects($this->once())
+            ->method('registerServices')
+            ->with($container)
+            ->willThrowException($exception);
+
+        $this->expectException(ContainerException::class);
+        $this->expectExceptionCode($exceptionCode);
+        $this->expectExceptionMessage(
+            sprintf(
+                'Failed to register services using provider \'%s\': %s',
+                get_class($provider),
+                $exceptionMessage
+            )
+        );
+
+        $container->configure($provider);
+    }
+
+    /**
+     * Assert that configure() will correctly configure the expected container services
+     *
+     * @param bool $viaConstructor
+     *
+     * @dataProvider getConfigureData
+     *
+     * @throws CircularDependencyException
+     * @throws ContainerException
+     * @throws NotFoundException
+     */
+    public function testConfigure(bool $viaConstructor): void
+    {
+        $fooService = new \stdClass();
+        $barServiceFactory = static function () {
+            return new \stdClass();
+        };
+
+        $serviceProvider = new class($fooService, $barServiceFactory) implements ServiceProviderInterface {
+            private \stdClass $fooService;
+            private \Closure $barServiceFactory;
+
+            public function __construct($fooService, $barServiceFactory)
+            {
+                $this->fooService = $fooService;
+                $this->barServiceFactory = $barServiceFactory;
+            }
+
+            public function registerServices(Container $container): void
+            {
+                $container->set('FooService', $this->fooService);
+                $container->setFactory('BarService', $this->barServiceFactory);
+            }
+        };
+
+        if ($viaConstructor) {
+            $container = new Container($serviceProvider);
+        } else {
+            $container = new Container();
+            $container->configure($serviceProvider);
+        }
+        $this->assertSame($fooService, $container->get('FooService'));
+        $this->assertInstanceOf(\stdClass::class, $container->get('BarService'));
+    }
+
+    /**
+     * @return array
+     */
+    public function getConfigureData(): array
+    {
+        return [
+            [true],
+            [false],
+        ];
     }
 }

@@ -33,21 +33,19 @@ The `Arp\Container\Container` implements the `Psr\ContainerInterface` and theref
 There are a number of different ways we can register a 'service' with the container, the method you choose will depend on how you wish the 
 service to be created.
 
-The service name is conventionally the fully qualified class name of the service being created. This helps reduce 
-confusion on file locations in relation to services, and we can also reduce configuration by using the PHP `::class` constant. 
-
 ### Objects and Values
 
 The simplest use case is when you need to `set()` an object or value on the container. These values do not require 
 instantiation, the container will simply store and return this value unmodified when requested via `get()`.
 
     $container = new Container();
-    $container->set('TodaysDate', new \DateTime('today'));
-    $todaysDate = $container->get('TodaysDate');
+    $container->set('TheDateOfToday', new \DateTime('today'));
+    $todaysDate = $container->get('TheDateOfToday');
        
 ### Factories
 
-Factories provide us a location to construct and resolve dependencies using the container. The factory can be any php `callable`.
+Factories provide us a location to construct and resolve dependencies using the container. The factory can be any php `callable`
+and can be set by calling `$container->setFactory()`.
 
     $container = new Container();
     $container->setFactory('TodaysDate', static function() {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Arp\Container\Provider;
 
 use Arp\Container\Container;
+use Arp\Container\Exception\InvalidArgumentException;
 use Arp\Container\Provider\Exception\ServiceProviderException;
 
 /**
@@ -66,6 +67,7 @@ final class ConfigServiceProvider implements ServiceProviderInterface
      * @param Container $container
      * @param array     $factories
      *
+     * @throws InvalidArgumentException
      * @throws ServiceProviderException
      */
     private function registerFactories(Container $container, array $factories): void
@@ -86,16 +88,13 @@ final class ConfigServiceProvider implements ServiceProviderInterface
     }
 
     /**
-     * Register a factory that was provided as a configuration array.
-     *
-     * Using the array format of [$factory, $methodName]
-     *
-     * $factory can be callable|object|string
+     * Register a factory that was provided as a configuration array. Using the array format of [$factory, $methodName]
      *
      * @param Container $container
      * @param string    $serviceName
      * @param array     $factoryConfig
      *
+     * @throws InvalidArgumentException
      * @throws ServiceProviderException
      */
     private function registerArrayFactory(Container $container, string $serviceName, array $factoryConfig): void
@@ -127,6 +126,7 @@ final class ConfigServiceProvider implements ServiceProviderInterface
      * @param string|null     $methodName
      *
      * @throws ServiceProviderException
+     * @throws InvalidArgumentException
      */
     private function registerFactory(
         Container $container,
