@@ -2,12 +2,11 @@
 
 declare(strict_types=1);
 
-namespace ArpTest\ContainerArray;
+namespace ArpTest\Container;
 
 use Arp\Container\Exception\ContainerException;
 use Arp\Container\Exception\NotFoundException;
 use Arp\Container\Container;
-use ArpTest\Container\CallableMock;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
@@ -157,11 +156,7 @@ final class ContainerTest extends TestCase
 
         $this->expectException(ContainerException::class);
         $this->expectDeprecationMessage(
-            sprintf(
-                'A circular dependency was detected for service \'%s\' and the registered factory \'%s\'',
-                $name,
-                $factoryClassName
-            )
+            sprintf('A circular configuration dependency was detected for service \'%s\'', $name)
         );
 
         $container->get($name);

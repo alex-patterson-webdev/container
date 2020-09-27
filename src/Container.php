@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Arp\Container;
 
 use Arp\Container\Exception\ContainerException;
+use Arp\Container\Exception\InvalidArgumentException;
 use Arp\Container\Exception\NotFoundException;
 use Arp\Container\Factory\ObjectFactory;
 use Arp\Container\Factory\ServiceFactoryInterface;
@@ -39,6 +40,11 @@ final class Container implements ContainerInterface
      * @var string[]
      */
     private array $factoryClasses = [];
+
+    /**
+     * @var array
+     */
+    private array $requested = [];
 
     /**
      * @param ServiceProviderInterface|null $serviceProvider
@@ -78,24 +84,64 @@ final class Container implements ContainerInterface
      */
     private function doGet(string $name, array $arguments = null)
     {
-        if (isset($this->services[$name])) {
-            return $this->services[$name];
-        }
-
         if (isset($this->aliases[$name])) {
-            return $this->get($this->aliases[$name]);
+            return $this->doGet($this->aliases[$name]);
         }
 
-        $factory = $this->resolveFactory($name);
-        if (null !== $factory) {
-            $service = $this->invokeFactory($factory, $name, $arguments);
-            $this->set($name, $service);
+        if (isset($this->services[$name])) {
+            $service = $this->services[$name];
+        } elseif (isset($this->requested[$name])) {
+            throw new ContainerException(
+                sprintf(
+                    'A circular dependency has been detected for service \'%s\'. The dependency graph includes %s',
+                    $name,
+                    implode(',', array_keys($this->requested))
+                )
+            );
+        } else {
+            $factory = $this->resolveFactory($name);
+            if (null !== $factory) {
+                $this->requested[$name] = true;
+                $service = $this->invokeFactory($factory, $name, $arguments);
+                $this->set($name, $service);
+                unset($this->requested[$name]);
+            }
+        }
+
+        if (isset($service)) {
             return $service;
         }
 
         throw new NotFoundException(
             sprintf('Service \'%s\' could not be found registered with the container', $name)
         );
+    }
+
+    /**
+     * Create a new service with the provided options. Services required via build will always have a new instance
+     * of the service returned. Only services registered with factories can be built.
+     *
+     * @param string $name
+     * @param array  $arguments
+     *
+     * @return mixed
+     *
+     * @throws ContainerException
+     */
+    public function build(string $name, array $arguments = [])
+    {
+        if (isset($this->aliases[$name])) {
+            return $this->build($this->aliases[$name]);
+        }
+
+        $factory = $this->resolveFactory($name);
+        if (null === $factory) {
+            throw new ContainerException(
+                sprintf('Unable to build service \'%s\': No valid factory could be found', $name)
+            );
+        }
+
+        return $this->invokeFactory($factory, $name, $arguments);
     }
 
     /**
@@ -140,15 +186,32 @@ final class Container implements ContainerInterface
     }
 
     /**
-     * Register a callable factory for the container.
+     * Register a factory for the container.
      *
-     * @param string   $name    The name of the service to register.
-     * @param callable $factory The factory callable responsible for creating the service.
+     * @param string          $name    The name of the service to register.
+     * @param string|callable $factory The factory callable responsible for creating the service.
      *
      * @return $this
+     *
+     * @throws InvalidArgumentException If the provided factory is not string or callable
      */
-    public function setFactory(string $name, callable $factory): self
+    public function setFactory(string $name, $factory): self
     {
+        if (is_string($factory)) {
+            return $this->setFactoryClass($name, $factory);
+        }
+
+        if (!is_callable($factory)) {
+            throw new InvalidArgumentException(
+                sprintf(
+                    'The \'factory\' argument must be of type \'string\' or \'callable\';'
+                    . '\'%s\' provided for service \'%s\'',
+                    is_object($factory) ? get_class($factory) : gettype($factory),
+                    $name
+                )
+            );
+        }
+
         $this->factories[$name] = $factory;
 
         return $this;
@@ -197,33 +260,6 @@ final class Container implements ContainerInterface
         $this->aliases[$alias] = $name;
 
         return $this;
-    }
-
-    /**
-     * Create a new service with the provided options
-     *
-     * @param string $name
-     * @param array  $arguments
-     *
-     * @return mixed
-     *
-     * @throws ContainerException
-     */
-    public function build(string $name, array $arguments = [])
-    {
-        if (isset($this->aliases[$name])) {
-            return $this->build($this->aliases[$name]);
-        }
-
-        $factory = $this->resolveFactory($name);
-
-        if (null === $factory) {
-            throw new ContainerException(
-                sprintf('Unable to build service \'%s\': No valid factory could be found', $name)
-            );
-        }
-
-        return $this->invokeFactory($factory, $name, $arguments);
     }
 
     /**
@@ -302,11 +338,7 @@ final class Container implements ContainerInterface
     {
         if ($factoryClassName === $name) {
             throw new ContainerException(
-                sprintf(
-                    'A circular dependency was detected for service \'%s\' and the registered factory \'%s\'',
-                    $name,
-                    $factoryClassName
-                )
+                sprintf('A circular configuration dependency was detected for service \'%s\'', $name)
             );
         }
 

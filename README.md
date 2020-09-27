@@ -47,7 +47,7 @@ instantiation, the container will simply store and return this value unmodified 
        
 ### Factories
 
-Factories provide us a location to construct and resolve dependencies using the container. The factory can be any php `callable`. 
+Factories provide us a location to construct and resolve dependencies using the container. The factory can be any php `callable`.
 
     $container = new Container();
     $container->setFactory('TodaysDate', static function() {
@@ -61,10 +61,8 @@ resolve other dependencies.
         return new TodayDateService($container->get('TodaysDate');
     });
     
-### Requested service name
-    
 We also have access to the requested service name as the second argument, `$name`. By being aware of the name of the service which
-is being created it can allow us to create reusable factories.
+is being created it allows the creation of reusable factories.
 
     $factory = static function(ContainerInterface $container, string $name) {
        $todaysDate = $container->get('TodaysDate');
