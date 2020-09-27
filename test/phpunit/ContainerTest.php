@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace ArpTest\Container;
 
-use Arp\Container\Exception\ContainerException;
-use Arp\Container\Exception\NotFoundException;
 use Arp\Container\Container;
+use Arp\Container\Exception\CircularDependencyException;
+use Arp\Container\Exception\ContainerException;
+use Arp\Container\Exception\InvalidArgumentException;
+use Arp\Container\Exception\NotFoundException;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
-use Psr\Container\NotFoundExceptionInterface;
 
 /**
  * @covers \Arp\Container\Container
@@ -65,6 +66,10 @@ final class ContainerTest extends TestCase
 
     /**
      * Assert that a value can be set and returned from the container.
+     *
+     * @throws CircularDependencyException
+     * @throws ContainerException
+     * @throws NotFoundException
      */
     public function testGetWillReturnAServiceByName(): void
     {
@@ -100,7 +105,9 @@ final class ContainerTest extends TestCase
     /**
      * Assert that the container will throw a NotFoundException if the requested service cannot be found.
      *
-     * @throws NotFoundExceptionInterface
+     * @throws CircularDependencyException
+     * @throws ContainerException
+     * @throws NotFoundException
      */
     public function testGetWillThrowNotFoundExceptionIfRequestedServiceIsNotRegistered(): void
     {
@@ -118,6 +125,10 @@ final class ContainerTest extends TestCase
 
     /**
      * Assert that a invalid/non-callable factory class will throw a ContainerException.
+     *
+     * @throws CircularDependencyException
+     * @throws ContainerException
+     * @throws NotFoundException
      */
     public function testGetWillThrowContainerExceptionIfTheRegisteredFactoryIsNotCallable(): void
     {
@@ -146,7 +157,7 @@ final class ContainerTest extends TestCase
      *
      * @throws ContainerExceptionInterface
      */
-    public function testCircularDependencyWithFactoryClassNameWillThrowContainerException(): void
+    public function testCircularConfigurationDependencyWithFactoryClassNameWillThrowContainerException(): void
     {
         $name = CallableMock::class;
         $factoryClassName = CallableMock::class;
@@ -164,6 +175,8 @@ final class ContainerTest extends TestCase
 
     /**
      * Assert that the container will throw a ContainerException is the registered factory throws an exception.
+     *
+     * @throws ContainerException
      */
     public function testFactoryCreationErrorWillBeCaughtAndRethrownAsContainerException(): void
     {
@@ -190,6 +203,10 @@ final class ContainerTest extends TestCase
      * Assert that an unregistered service, which resolves to the name of a valid class, will be created and
      * registered with the container. Additional calls to the container's get() method should also return the same
      * service
+     *
+     * @throws CircularDependencyException
+     * @throws ContainerException
+     * @throws NotFoundException
      */
     public function testGetWillCreateAndReturnUnregisteredServiceIfTheNameResolvesToAValidClassName(): void
     {
@@ -202,5 +219,45 @@ final class ContainerTest extends TestCase
         $this->assertInstanceOf($name, $service);
         $this->assertTrue($container->has($name));
         $this->assertSame($service, $container->get($name));
+    }
+
+    /**
+     * When creating factories with dependencies, ensure we catch any attempts to load services that depend on each
+     * other by throwing a ContainerException
+     *
+     * @throws CircularDependencyException
+     * @throws ContainerException
+     * @throws InvalidArgumentException
+     * @throws NotFoundException
+     */
+    public function testGetWillThrowContainerExceptionIfAFactoryDependencyCausesACircularCreationDependency(): void
+    {
+        $container = new Container();
+
+        $factoryA = static function (ContainerInterface $container) {
+            $serviceA = new \stdClass();
+            $serviceA->serviceB = $container->get('ServiceB');
+            return $serviceA;
+        };
+
+        $factoryB = static function (ContainerInterface $container) {
+            $serviceB = new \stdClass();
+            $serviceB->serviceA = $container->get('ServiceA');
+            return $serviceB;
+        };
+
+        $container->setFactory('ServiceA', $factoryA);
+        $container->setFactory('ServiceB', $factoryB);
+
+        $this->expectException(CircularDependencyException::class);
+        $this->expectExceptionMessage(
+            sprintf(
+                'A circular dependency has been detected for service \'%s\'. The dependency graph includes %s',
+                'ServiceA',
+                implode(',', ['ServiceA', 'ServiceB'])
+            )
+        );
+
+        $container->get('ServiceA');
     }
 }

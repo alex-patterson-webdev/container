@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Arp\Container;
 
+use Arp\Container\Exception\CircularDependencyException;
 use Arp\Container\Exception\ContainerException;
 use Arp\Container\Exception\InvalidArgumentException;
 use Arp\Container\Exception\NotFoundException;
@@ -63,8 +64,9 @@ final class Container implements ContainerInterface
      *
      * @return mixed
      *
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
+     * @throws CircularDependencyException
+     * @throws ContainerException
+     * @throws NotFoundException
      *
      * @noinspection PhpMissingParamTypeInspection
      */
@@ -81,6 +83,7 @@ final class Container implements ContainerInterface
      *
      * @throws ContainerException
      * @throws NotFoundException
+     * @throws CircularDependencyException
      */
     private function doGet(string $name, array $arguments = null)
     {
@@ -91,7 +94,7 @@ final class Container implements ContainerInterface
         if (isset($this->services[$name])) {
             $service = $this->services[$name];
         } elseif (isset($this->requested[$name])) {
-            throw new ContainerException(
+            throw new CircularDependencyException(
                 sprintf(
                     'A circular dependency has been detected for service \'%s\'. The dependency graph includes %s',
                     $name,
