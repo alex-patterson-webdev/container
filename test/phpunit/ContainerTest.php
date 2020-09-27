@@ -14,7 +14,7 @@ use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 
 /**
- * @covers \Arp\Container\Container
+ * @covers  \Arp\Container\Container
  *
  * @author  Alex Patterson <alex.patterson.webdev@gmail.com>
  * @package ArpTest\ContainerArray
@@ -369,4 +369,88 @@ final class ContainerTest extends TestCase
         $container->get($serviceName);
     }
 
+    /**
+     * Assert that if we try to build a service and we cannot resolve a factory from then a NotFoundException is thrown
+     *
+     * @throws ContainerException
+     */
+    public function testBuildWillThrowNotFoundExceptionIfTheFactoryCannotBeResolvedFromName(): void
+    {
+        $container = new Container();
+
+        $name = 'FooService';
+
+        $this->expectException(NotFoundException::class);
+        $this->expectExceptionMessage(
+            sprintf('Unable to build service \'%s\': No valid factory could be found', $name)
+        );
+
+        $container->build($name);
+    }
+
+    /**
+     * Assert that when creating a service via build(), any previously set service matching the provided $name
+     * will be ignored and a new instance will be returned. We additional check that the build also will not modify
+     * or change the previous service and calls to get() will return the existing value
+     *
+     * @throws CircularDependencyException
+     * @throws ContainerException
+     * @throws InvalidArgumentException
+     * @throws NotFoundException
+     */
+    public function testBuildWillIgnorePreviouslySetServiceWhenCreatingViaFactory(): void
+    {
+        $container = new Container();
+
+        $serviceName = 'ServiceName';
+
+        // Define our service
+        $container->setFactory(
+            $serviceName,
+            static function () {
+                return new \stdClass();
+            }
+        );
+
+        // Request it by it's service name  so we 'set' the service
+        $service = $container->get($serviceName);
+
+        $builtService = $container->build($serviceName);
+
+        $this->assertInstanceOf(\stdClass::class, $service);
+        $this->assertInstanceOf(\stdClass::class, $builtService);
+
+        // The services should not be the same object instance
+        $this->assertNotSame($service, $builtService);
+
+        // We expect the existing service to not have been modified and additional calls to get
+        // resolve to the existing set service (and will not execute the factory)
+        $this->assertSame($service, $container->get($serviceName));
+    }
+
+
+    /**
+     * Assert that an alias service name will correctly resolve the the correct service when calling build()
+     *
+     * @throws InvalidArgumentException
+     * @throws NotFoundException
+     */
+    public function testBuildWillResolveAliasToServiceName(): void
+    {
+        $container = new Container();
+
+        $alias = 'FooAliasName';
+        $name = 'FooServiceName';
+
+        // Define our service
+        $container->setFactory(
+            $name,
+            static function () {
+                return new \stdClass();
+            }
+        );
+        $container->setAlias($alias, $name);
+
+        $this->assertInstanceOf(\stdClass::class, $container->build($alias));
+    }
 }

@@ -14,7 +14,6 @@ use Arp\Container\Provider\Exception\ServiceProviderException;
 use Arp\Container\Provider\ServiceProviderInterface;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
-use Psr\Container\NotFoundExceptionInterface;
 
 /**
  * @author  Alex Patterson <alex.patterson.webdev@gmail.com>
@@ -129,7 +128,7 @@ final class Container implements ContainerInterface
      *
      * @return mixed
      *
-     * @throws ContainerException
+     * @throws NotFoundException
      */
     public function build(string $name, array $arguments = [])
     {
@@ -139,7 +138,7 @@ final class Container implements ContainerInterface
 
         $factory = $this->resolveFactory($name);
         if (null === $factory) {
-            throw new ContainerException(
+            throw new NotFoundException(
                 sprintf('Unable to build service \'%s\': No valid factory could be found', $name)
             );
         }
@@ -248,7 +247,7 @@ final class Container implements ContainerInterface
      */
     public function setAlias(string $alias, string $name): self
     {
-        if (!isset($this->services[$name])) {
+        if (!isset($this->services[$name]) && !isset($this->factories[$name]) && !isset($this->factoryClasses[$name])) {
             throw new InvalidArgumentException(
                 sprintf('Unable to configure alias \'%s\' for unknown service \'%s\'', $alias, $name)
             );
