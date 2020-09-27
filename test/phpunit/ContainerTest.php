@@ -103,6 +103,49 @@ final class ContainerTest extends TestCase
     }
 
     /**
+     * Assert that a ContainerException is thrown when trying to register a service alias for an unregistered service
+     *
+     * @throws InvalidArgumentException
+     */
+    public function testSetAliasWillThrowContainerExceptionIfTheServiceNameAliasedHasNotBeenRegistered(): void
+    {
+        $container = new Container();
+
+        $alias = 'FooService';
+        $name = 'TestService';
+
+        $this->expectException(ContainerException::class);
+        $this->expectExceptionMessage(
+            sprintf('Unable to configure alias \'%s\' for unknown service \'%s\'', $alias, $name)
+        );
+
+        $container->setAlias($alias, $name);
+    }
+
+    /**
+     * Assert that a ContainerException is thrown when trying to register a service alias with a service that
+     * has an identical name
+     *
+     * @throws InvalidArgumentException
+     */
+    public function testSetAliasWillThrowContainerExceptionIfTheServiceNameIsIdenticalToTheAlias(): void
+    {
+        $container = new Container();
+
+        $alias = 'TestService';
+        $name = 'TestService';
+
+        $container->set($name, new \stdClass());
+
+        $this->expectException(ContainerException::class);
+        $this->expectExceptionMessage(
+            sprintf('Unable to configure alias \'%s\' with identical service name \'%s\'', $alias, $name)
+        );
+
+        $container->setAlias($alias, $name);
+    }
+
+    /**
      * Assert that the container will throw a NotFoundException if the requested service cannot be found.
      *
      * @throws CircularDependencyException
@@ -302,4 +345,34 @@ final class ContainerTest extends TestCase
 
         $container->get('ServiceA');
     }
+
+    /**
+     * When calling get() for a service that has an invalid (not callable) factory class name a ContainerException
+     * should be thrown
+     *
+     * @throws ContainerException
+     */
+    public function testGetWillThrowContainerExceptionForInvalidRegisteredFactoryClassName(): void
+    {
+        $container = new Container();
+
+        $serviceName = 'FooService';
+        $factoryClassName = 'Foo\\Bar\\ClassNameThatDoesNotExist';
+
+        // We should be able to add the invalid class without issues
+        $container->setFactoryClass($serviceName, $factoryClassName);
+
+        $this->expectException(ContainerException::class);
+        $this->expectExceptionMessage(
+            sprintf(
+                'The factory service \'%s\', registered for service \'%s\', is not a valid service or class name',
+                $factoryClassName,
+                $serviceName
+            )
+        );
+
+        // It is only when we requested the service via get that the factory creation should fail
+        $container->get($serviceName);
+    }
+
 }

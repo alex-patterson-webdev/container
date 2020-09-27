@@ -244,18 +244,18 @@ final class Container implements ContainerInterface
      *
      * @return $this
      *
-     * @throws ContainerException
+     * @throws InvalidArgumentException
      */
     public function setAlias(string $alias, string $name): self
     {
         if (!isset($this->services[$name])) {
-            throw new ContainerException(
+            throw new InvalidArgumentException(
                 sprintf('Unable to configure alias \'%s\' for unknown service \'%s\'', $alias, $name)
             );
         }
 
         if ($alias === $name) {
-            throw new ContainerException(
+            throw new InvalidArgumentException(
                 sprintf('Unable to configure alias \'%s\' with identical service name \'%s\'', $alias, $name)
             );
         }
