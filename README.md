@@ -39,12 +39,12 @@ The simplest use case is when you need to `set()` an object or value on the cont
 instantiation, the container will simply store and return this value unmodified when requested via `get()`.
 
     $container = new Container();
-    $container->set('TheDateOfToday', new \DateTime('today'));
-    $todaysDate = $container->get('TheDateOfToday');
+    $container->set('TodaysDate', new \DateTime('today'));
+    $todaysDate = $container->get('TodaysDate');
        
 ### Factories
 
-Factories provide us a location to construct and resolve dependencies using the container. The factory can be any php `callable`
+Factories provide us with a location to construct and resolve dependencies using the container. The factory can be any php `callable`
 and can be set by calling `$container->setFactory()`.
 
     $container = new Container();

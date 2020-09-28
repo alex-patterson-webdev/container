@@ -116,7 +116,7 @@ final class ContainerTest extends TestCase
     {
         $container = new Container();
 
-        $name = 'TheDateOfToday';
+        $name = 'TodaysDate';
         $service = new \DateTime('today');
         $container->set($name, $service);
 
@@ -528,7 +528,7 @@ final class ContainerTest extends TestCase
             return new \stdClass();
         };
 
-        $serviceProvider = new class($fooService, $barServiceFactory) implements ServiceProviderInterface {
+        $serviceProvider = new class ($fooService, $barServiceFactory) implements ServiceProviderInterface {
             private \stdClass $fooService;
             private \Closure $barServiceFactory;
 
