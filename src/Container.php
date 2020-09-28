@@ -13,7 +13,6 @@ use Arp\Container\Factory\ServiceFactoryInterface;
 use Arp\Container\Provider\Exception\ServiceProviderException;
 use Arp\Container\Provider\ServiceProviderInterface;
 use Psr\Container\ContainerExceptionInterface;
-use Psr\Container\ContainerInterface;
 
 /**
  * @author  Alex Patterson <alex.patterson.webdev@gmail.com>
@@ -56,6 +55,32 @@ final class Container implements ContainerInterface
         if (null !== $serviceProvider) {
             $this->configure($serviceProvider);
         }
+    }
+
+    /**
+     * @param string $name
+     *
+     * @return bool
+     *
+     * @noinspection PhpMissingParamTypeInspection
+     * @noinspection ReturnTypeCanBeDeclaredInspection
+     */
+    public function has($name)
+    {
+        return $this->doHas($name);
+    }
+
+    /**
+     * @param string $name
+     *
+     * @return bool
+     */
+    private function doHas(string $name): bool
+    {
+        return isset($this->services[$name])
+            || isset($this->factories[$name])
+            || isset($this->aliases[$name])
+            || isset($this->factoryClasses[$name]);
     }
 
     /**
@@ -145,32 +170,6 @@ final class Container implements ContainerInterface
         }
 
         return $this->invokeFactory($factory, $name, $arguments);
-    }
-
-    /**
-     * @param string $name
-     *
-     * @return bool
-     *
-     * @noinspection PhpMissingParamTypeInspection
-     * @noinspection ReturnTypeCanBeDeclaredInspection
-     */
-    public function has($name)
-    {
-        return $this->doHas($name);
-    }
-
-    /**
-     * @param string $name
-     *
-     * @return bool
-     */
-    private function doHas(string $name): bool
-    {
-        return isset($this->services[$name])
-            || isset($this->factories[$name])
-            || isset($this->aliases[$name])
-            || isset($this->factoryClasses[$name]);
     }
 
     /**
@@ -335,18 +334,17 @@ final class Container implements ContainerInterface
             );
         }
 
-        if (class_exists($factoryClassName, true) && !$this->has($factoryClassName)) {
-            $this->setFactory($factoryClassName, $this->createObjectFactory());
-        }
-
         if (!$this->has($factoryClassName)) {
-            throw new ContainerException(
-                sprintf(
-                    'The factory service \'%s\', registered for service \'%s\', is not a valid service or class name',
-                    $factoryClassName,
-                    $name
-                )
-            );
+            if (!class_exists($factoryClassName, true)) {
+                throw new ContainerException(
+                    sprintf(
+                        'Failed to create the factory for service \'%s\': The factory class \'%s\' could not be found',
+                        $factoryClassName,
+                        $name
+                    )
+                );
+            }
+            $this->setFactory($factoryClassName, $this->createObjectFactory());
         }
 
         return [$this->get($factoryClassName), $methodName ?? '__invoke'];

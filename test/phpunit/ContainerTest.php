@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ArpTest\Container;
 
 use Arp\Container\Container;
+use Arp\Container\ContainerInterface;
 use Arp\Container\Exception\CircularDependencyException;
 use Arp\Container\Exception\ContainerException;
 use Arp\Container\Exception\InvalidArgumentException;
@@ -14,7 +15,6 @@ use Arp\Container\Provider\ServiceProviderInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerExceptionInterface;
-use Psr\Container\ContainerInterface;
 
 /**
  * @covers  \Arp\Container\Container
@@ -380,7 +380,7 @@ final class ContainerTest extends TestCase
         $this->expectException(ContainerException::class);
         $this->expectExceptionMessage(
             sprintf(
-                'The factory service \'%s\', registered for service \'%s\', is not a valid service or class name',
+                'Failed to create the factory for service \'%s\': The factory class \'%s\' could not be found',
                 $factoryClassName,
                 $serviceName
             )

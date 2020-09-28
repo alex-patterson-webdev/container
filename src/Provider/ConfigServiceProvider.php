@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Arp\Container\Provider;
 
-use Arp\Container\Container;
-use Arp\Container\Exception\InvalidArgumentException;
+use Arp\Container\ContainerInterface;
+use Arp\Container\Exception\ContainerException;
 use Arp\Container\Provider\Exception\ServiceProviderException;
 
 /**
@@ -32,45 +32,34 @@ final class ConfigServiceProvider implements ServiceProviderInterface
     }
 
     /**
-     * @param Container $container
+     * @param ContainerInterface $container
      *
      * @throws ServiceProviderException
      */
-    public function registerServices(Container $container): void
+    public function registerServices(ContainerInterface $container): void
     {
-        try {
-            if (isset($this->config[static::SERVICES]) && is_array($this->config[static::SERVICES])) {
-                foreach ($this->config[static::SERVICES] as $name => $service) {
-                    $container->set($name, $service);
-                }
+        if (isset($this->config[static::SERVICES]) && is_array($this->config[static::SERVICES])) {
+            foreach ($this->config[static::SERVICES] as $name => $service) {
+                $container->set($name, $service);
             }
+        }
 
-            if (isset($this->config[static::FACTORIES]) && is_array($this->config[static::FACTORIES])) {
-                $this->registerFactories($container, $this->config[static::FACTORIES]);
-            }
+        if (isset($this->config[static::FACTORIES]) && is_array($this->config[static::FACTORIES])) {
+            $this->registerFactories($container, $this->config[static::FACTORIES]);
+        }
 
-            if (isset($this->config[static::ALIASES]) && is_array($this->config[static::ALIASES])) {
-                foreach ($this->config[static::ALIASES] as $name => $alias) {
-                    $container->setAlias($alias, $name);
-                }
-            }
-        } catch (\Throwable $e) {
-            throw new ServiceProviderException(
-                sprintf('Failed to register services with the container: %s', $e->getMessage()),
-                $e->getCode(),
-                $e
-            );
+        if (isset($this->config[static::ALIASES]) && is_array($this->config[static::ALIASES])) {
+            $this->registerAliases($container, $this->config[static::ALIASES]);
         }
     }
 
     /**
-     * @param Container $container
-     * @param array     $factories
+     * @param ContainerInterface $container
+     * @param array              $factories
      *
-     * @throws InvalidArgumentException
      * @throws ServiceProviderException
      */
-    private function registerFactories(Container $container, array $factories): void
+    private function registerFactories(ContainerInterface $container, array $factories): void
     {
         foreach ($factories as $name => $factory) {
             if (is_array($factory)) {
@@ -90,15 +79,17 @@ final class ConfigServiceProvider implements ServiceProviderInterface
     /**
      * Register a factory that was provided as a configuration array. Using the array format of [$factory, $methodName]
      *
-     * @param Container $container
-     * @param string    $serviceName
-     * @param array     $factoryConfig
+     * @param ContainerInterface $container
+     * @param string             $serviceName
+     * @param array              $factoryConfig
      *
-     * @throws InvalidArgumentException
      * @throws ServiceProviderException
      */
-    private function registerArrayFactory(Container $container, string $serviceName, array $factoryConfig): void
-    {
+    private function registerArrayFactory(
+        ContainerInterface $container,
+        string $serviceName,
+        array $factoryConfig
+    ): void {
         $factory = $factoryConfig[0] ?? null;
         if (null !== $factory) {
             $methodName = $factoryConfig[1] ?? null;
@@ -120,16 +111,15 @@ final class ConfigServiceProvider implements ServiceProviderInterface
     }
 
     /**
-     * @param Container       $container
-     * @param string          $serviceName
-     * @param object|callable $factory
-     * @param string|null     $methodName
+     * @param ContainerInterface $container
+     * @param string             $serviceName
+     * @param object|callable    $factory
+     * @param string|null        $methodName
      *
      * @throws ServiceProviderException
-     * @throws InvalidArgumentException
      */
     private function registerFactory(
-        Container $container,
+        ContainerInterface $container,
         string $serviceName,
         $factory,
         string $methodName = null
@@ -146,6 +136,40 @@ final class ConfigServiceProvider implements ServiceProviderInterface
             );
         }
 
-        $container->setFactory($serviceName, $factory);
+        try {
+            $container->setFactory($serviceName, $factory);
+        } catch (ContainerException $e) {
+            throw new ServiceProviderException(
+                sprintf('Failed to set factory for service \'%s\': %s', $serviceName, $e->getMessage()),
+                $e->getCode(),
+                $e
+            );
+        }
+    }
+
+    /**
+     * @param ContainerInterface $container
+     * @param array              $aliases
+     *
+     * @throws ServiceProviderException
+     */
+    private function registerAliases(ContainerInterface $container, array $aliases): void
+    {
+        foreach ($aliases as $aliasName => $serviceName) {
+            try {
+                $container->setAlias($aliasName, $serviceName);
+            } catch (ContainerException $e) {
+                throw new ServiceProviderException(
+                    sprintf(
+                        'Failed to register alias \'%s\' for service \'%s\': %s',
+                        $aliasName,
+                        $serviceName,
+                        $e->getMessage()
+                    ),
+                    $e->getCode(),
+                    $e
+                );
+            }
+        }
     }
 }
