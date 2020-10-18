@@ -33,9 +33,6 @@ The `Arp\Container\Container` implements the `Psr\ContainerInterface` and theref
 There are a number of different ways we can register a 'service' with the container, the method you choose will depend on how you wish the 
 service to be created.
 
-The service name is conventionally the fully qualified class name of the service being created. This helps reduce 
-confusion on file locations in relation to services, and we can also reduce configuration by using the PHP `::class` constant. 
-
 ### Objects and Values
 
 The simplest use case is when you need to `set()` an object or value on the container. These values do not require 
@@ -47,7 +44,8 @@ instantiation, the container will simply store and return this value unmodified 
        
 ### Factories
 
-Factories provide us a location to construct and resolve dependencies using the container. The factory can be any php `callable`.
+Factories provide us with a location to construct and resolve dependencies using the container. The factory can be any php `callable`
+and can be set by calling `$container->setFactory()`.
 
     $container = new Container();
     $container->setFactory('TodaysDate', static function() {
@@ -70,7 +68,9 @@ is being created it allows the creation of reusable factories.
             return new EnglishDateService($todaysDate);
        }
        return new FrenchDateService($todaysDate);
-   };
+    };
+   
+We can then assign the same factory with different service names.
    
     $container->setFactory('EnglishDateService', $factory);
     $container->setFactory('FrenchDateService', $factory);
@@ -88,6 +88,14 @@ In cases where you need have a service without dependencies we can use the `Arp\
     $object = $container->get(\stcClass());
     
 _The above configuration isn't explicitly required as any service `$name` using a FQCN not registered with the container 
-with be automatically registered to use `ObjectFactory`. For clarity, it is recommended that you explicitly 
-define the service_.
+with be automatically registered to use `ObjectFactory`. We recommended that you explicitly 
+define the service for clarity_.
+
+## Unit Tests
+
+The project unit tests can be executed using PHPUnit
+
+    php vendor/bin/phpunit
+    
+    
 
