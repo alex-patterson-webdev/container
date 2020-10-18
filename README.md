@@ -68,7 +68,7 @@ is being created it allows the creation of reusable factories.
             return new EnglishDateService($todaysDate);
        }
        return new FrenchDateService($todaysDate);
-   };
+    };
    
     $container->setFactory('EnglishDateService', $factory);
     $container->setFactory('FrenchDateService', $factory);
