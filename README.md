@@ -70,6 +70,8 @@ is being created it allows the creation of reusable factories.
        return new FrenchDateService($todaysDate);
     };
    
+We can then assign the same factory with different service names.
+   
     $container->setFactory('EnglishDateService', $factory);
     $container->setFactory('FrenchDateService', $factory);
     
@@ -86,6 +88,14 @@ In cases where you need have a service without dependencies we can use the `Arp\
     $object = $container->get(\stcClass());
     
 _The above configuration isn't explicitly required as any service `$name` using a FQCN not registered with the container 
-with be automatically registered to use `ObjectFactory`. For clarity, it is recommended that you explicitly 
-define the service_.
+with be automatically registered to use `ObjectFactory`. We recommended that you explicitly 
+define the service for clarity_.
+
+## Unit Tests
+
+The project unit tests can be executed using PHPUnit
+
+    php vendor/bin/phpunit
+    
+    
 
