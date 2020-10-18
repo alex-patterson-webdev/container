@@ -30,14 +30,12 @@ final class ObjectFactory implements ServiceFactoryInterface
             throw new ServiceFactoryException(
                 sprintf(
                     'Unable to create a new object from requested service \'%s\': '
-                    . 'The service  does not resolve to a valid class name',
+                    . 'The service name does not resolve to a valid class name',
                     $name
                 )
             );
         }
 
-        return (null === $options)
-            ? new $name()
-            : new $name(...$options);
+        return (null === $options) ? new $name() : new $name(...$options);
     }
 }
