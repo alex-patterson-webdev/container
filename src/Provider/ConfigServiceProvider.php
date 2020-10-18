@@ -111,10 +111,10 @@ final class ConfigServiceProvider implements ServiceProviderInterface
     }
 
     /**
-     * @param ContainerInterface $container
-     * @param string             $serviceName
-     * @param object|callable    $factory
-     * @param string|null        $methodName
+     * @param ContainerInterface     $container
+     * @param string                 $serviceName
+     * @param object|callable|string $factory
+     * @param string|null            $methodName
      *
      * @throws ServiceProviderException
      */
