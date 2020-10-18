@@ -324,12 +324,13 @@ final class Container implements ContainerInterface
      *
      * @return array
      *
+     * @throws CircularDependencyException
      * @throws ContainerException
      */
     private function resolveFactoryClass(string $name, string $factoryClassName, ?string $methodName): array
     {
         if ($factoryClassName === $name) {
-            throw new ContainerException(
+            throw new CircularDependencyException(
                 sprintf('A circular configuration dependency was detected for service \'%s\'', $name)
             );
         }
