@@ -1,22 +1,25 @@
-<phpunit
-        bootstrap="./vendor/autoload.php"
-        verbose="true"
-        beStrictAboutOutputDuringTests="true"
-        beStrictAboutTestsThatDoNotTestAnything="true"
-        beStrictAboutTodoAnnotatedTests="true"
-        colors="true"
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         bootstrap="./vendor/autoload.php"
+         verbose="true"
+         beStrictAboutOutputDuringTests="true"
+         beStrictAboutTodoAnnotatedTests="true"
+         colors="true"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.3/phpunit.xsd"
 >
     <testsuites>
-        <testsuite name="ContainerArray">
+        <testsuite name="Container">
             <directory>./test/phpunit</directory>
         </testsuite>
     </testsuites>
-    <filter>
-        <whitelist processUncoveredFilesFromWhitelist="false">
+
+    <coverage processUncoveredFiles="false">
+        <include>
             <directory suffix=".php">src</directory>
-        </whitelist>
-    </filter>
+        </include>
+    </coverage>
+
     <logging>
-        <log type="coverage-clover" target="clover.xml"/>
+        <testdoxXml outputFile="./test/coverage/clover.xml"/>
     </logging>
 </phpunit>
