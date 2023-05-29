@@ -12,7 +12,7 @@ A simple PSR-11 compatible Dependency Injection Container
 
 Installation via [Composer](https://getcomposer.org).
 
-    require alex-patterson-webdev/container ^1
+    require alex-patterson-webdev/container ^0.1
  
 ## Usage
 

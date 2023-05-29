@@ -38,18 +38,18 @@ final class ConfigServiceProvider implements ServiceProviderInterface
      */
     public function registerServices(ContainerInterface $container): void
     {
-        if (isset($this->config[static::SERVICES]) && is_array($this->config[static::SERVICES])) {
-            foreach ($this->config[static::SERVICES] as $name => $service) {
+        if (isset($this->config[self::SERVICES]) && is_array($this->config[self::SERVICES])) {
+            foreach ($this->config[self::SERVICES] as $name => $service) {
                 $container->set($name, $service);
             }
         }
 
-        if (isset($this->config[static::FACTORIES]) && is_array($this->config[static::FACTORIES])) {
-            $this->registerFactories($container, $this->config[static::FACTORIES]);
+        if (isset($this->config[self::FACTORIES]) && is_array($this->config[self::FACTORIES])) {
+            $this->registerFactories($container, $this->config[self::FACTORIES]);
         }
 
-        if (isset($this->config[static::ALIASES]) && is_array($this->config[static::ALIASES])) {
-            $this->registerAliases($container, $this->config[static::ALIASES]);
+        if (isset($this->config[self::ALIASES]) && is_array($this->config[self::ALIASES])) {
+            $this->registerAliases($container, $this->config[self::ALIASES]);
         }
     }
 
@@ -111,10 +111,10 @@ final class ConfigServiceProvider implements ServiceProviderInterface
     }
 
     /**
-     * @param ContainerInterface $container
-     * @param string             $serviceName
-     * @param object|callable    $factory
-     * @param string|null        $methodName
+     * @param ContainerInterface     $container
+     * @param string                 $serviceName
+     * @param object|callable|string $factory
+     * @param string|null            $methodName
      *
      * @throws ServiceProviderException
      */
